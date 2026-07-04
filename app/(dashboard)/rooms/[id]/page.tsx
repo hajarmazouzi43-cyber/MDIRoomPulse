@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import SubscribeButton from '@/components/rooms/SubscribeButton'
@@ -9,6 +9,12 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ id:
   const { id } = await params
 
   const supabase = await createClient()
+
+  // ✅ Vérifier la session
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) {
+    redirect('/login')
+  }
 
   const { data: room } = await supabase
     .from('rooms')

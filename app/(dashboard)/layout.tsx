@@ -21,6 +21,7 @@ export default function DashboardLayout({
   useEffect(() => {
     async function getUser() {
       const { data: { user } } = await supabase.auth.getUser()
+      console.log('🔍 User:', user) 
       setUser(user)
       setLoading(false)
     }
@@ -77,6 +78,9 @@ export default function DashboardLayout({
                     </Link>
                     <Link href="/admin">
                     <Button variant="ghost" size="sm">Admin</Button>
+                    </Link>
+                    <Link href="/analytics">
+                    <Button variant="ghost" size="sm">Analytics</Button>
                     </Link>
               </nav>
             </div>

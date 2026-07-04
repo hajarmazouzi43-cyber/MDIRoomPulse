@@ -37,6 +37,28 @@ export default function RoomsPage() {
   useEffect(() => {
     fetchRooms()
     getUser()
+
+      // ✅ Realtime
+  const channel = supabase
+    .channel('rooms-changes')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'rooms'
+      },
+      () => {
+        console.log('🔄 Room changed, refreshing...')
+        fetchRooms()
+      }
+    )
+    .subscribe()
+
+  return () => {
+    supabase.removeChannel(channel)
+  }
+  
   }, [])
 
   const getUser = async () => {

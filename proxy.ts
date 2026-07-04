@@ -2,7 +2,6 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-// La fonction s'appelle désormais "proxy" au lieu de "middleware"
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({
     request: {
@@ -38,11 +37,13 @@ export async function proxy(request: NextRequest) {
 
   const { data: { session } } = await supabase.auth.getSession()
 
-  // Routes protégées
+  // ✅ Routes protégées
   const isProtectedRoute = 
     request.nextUrl.pathname.startsWith('/dashboard') ||
     request.nextUrl.pathname.startsWith('/admin') ||
-    request.nextUrl.pathname.startsWith('/rooms')
+    request.nextUrl.pathname.startsWith('/rooms') ||
+    request.nextUrl.pathname.startsWith('/analytics') ||
+    request.nextUrl.pathname.startsWith('/history')
 
   // Routes d'authentification
   const isAuthRoute = request.nextUrl.pathname === '/login'
@@ -62,7 +63,13 @@ export async function proxy(request: NextRequest) {
   return response
 }
 
-// La configuration reste la même
 export const config = {
-  matcher: ['/dashboard/:path*', '/admin/:path*', '/rooms/:path*', '/login'],
+  matcher: [
+    '/dashboard/:path*',
+    '/admin/:path*',
+    '/rooms/:path*',
+    '/analytics/:path*',
+    '/history/:path*',
+    '/login',
+  ],
 }
