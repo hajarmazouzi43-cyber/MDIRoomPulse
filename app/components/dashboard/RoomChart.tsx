@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
 interface RoomData {
   id: string
@@ -31,7 +31,6 @@ export default function RoomChart() {
   useEffect(() => {
     fetchRooms()
 
-    // ✅ Realtime pour les mises à jour
     const channel = supabase
       .channel('rooms-changes')
       .on(
@@ -61,24 +60,31 @@ export default function RoomChart() {
     name: room.name.length > 12 ? room.name.slice(0, 10) + '..' : room.name,
     occupied: room.current_people || 0,
     available: (room.max_people || 1) - (room.current_people || 0),
-    max: room.max_people || 1
   }))
 
+  if (chartData.length === 0) {
+    return (
+      <div className="h-64 flex items-center justify-center text-gray-400">
+        No rooms available
+      </div>
+    )
+  }
+
   return (
-    <ResponsiveContainer width="100%" height={400}>
+    <ResponsiveContainer width="100%" height={300}>
       <BarChart data={chartData}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="name" />
         <YAxis />
         <Tooltip 
-          formatter={(value: number, name: string) => {
+          formatter={(value: any, name: string) => {
             if (name === 'occupied') return [`${value} people`, 'Occupied']
             if (name === 'available') return [`${value} people`, 'Available']
             return [value, name]
           }}
         />
-        <Bar dataKey="occupied" stackId="a" fill="#EF4444" name="Occupied" radius={[4, 4, 0, 0]} />
-        <Bar dataKey="available" stackId="a" fill="#10B981" name="Available" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="occupied" stackId="a" fill="#EF4444" name="Occupied" />
+        <Bar dataKey="available" stackId="a" fill="#10B981" name="Available" />
       </BarChart>
     </ResponsiveContainer>
   )
