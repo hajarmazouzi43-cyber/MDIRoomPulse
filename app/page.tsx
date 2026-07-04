@@ -1,65 +1,67 @@
-import Image from "next/image";
+import { Button } from '@/components/ui/button'
+import Link from 'next/link'
 
-export default function Home() {
+export default function HomePage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen flex flex-col">
+      <header className="border-b">
+        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-[#0056B3]">MDI RoomPulse</h1>
+          <div className="space-x-4">
+            <Link href="/login">
+              <Button variant="outline">Sign In</Button>
+            </Link>
+            <Link href="/login?signup=true">
+              <Button>Create Account</Button>
+            </Link>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </header>
+
+      <main className="flex-1 container mx-auto px-4 py-16 flex flex-col items-center justify-center text-center">
+        <h2 className="text-4xl md:text-6xl font-bold mb-6">
+          Manage your meeting rooms in <span className="text-[#0056B3]">real time</span>
+        </h2>
+        <p className="text-xl text-gray-600 max-w-2xl mb-10">
+          Visualize room availability, receive notifications, and optimize the use of your meeting spaces.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Link href="/login">
+            <Button size="lg" className="text-lg px-8 bg-[#0056B3] hover:bg-[#00449E]">
+              Get Started
+            </Button>
+          </Link>
+          <Link href="/rooms">
+            <Button size="lg" variant="outline" className="text-lg px-8">
+              View Rooms
+            </Button>
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16 w-full max-w-3xl">
+          <div className="bg-gray-50 p-6 rounded-lg">
+            <div className="text-3xl font-bold text-[#0056B3]">⚡</div>
+            <h3 className="font-semibold mt-2">Real-time</h3>
+            <p className="text-sm text-gray-600">Instant updates</p>
+          </div>
+          <div className="bg-gray-50 p-6 rounded-lg">
+            <div className="text-3xl font-bold text-[#0056B3]">📧</div>
+            <h3 className="font-semibold mt-2">Notifications</h3>
+            <p className="text-sm text-gray-600">Email & WhatsApp alerts</p>
+          </div>
+          <div className="bg-gray-50 p-6 rounded-lg">
+            <div className="text-3xl font-bold text-[#0056B3]">📊</div>
+            <h3 className="font-semibold mt-2">Dashboard</h3>
+            <p className="text-sm text-gray-600">Statistics & reports</p>
+          </div>
         </div>
       </main>
+
+      <footer className="border-t py-6">
+        <div className="container mx-auto px-4 text-center text-sm text-gray-500">
+          © 2026 MDI RoomPulse - ENSA Berrechid
+        </div>
+      </footer>
     </div>
-  );
+  )
 }
