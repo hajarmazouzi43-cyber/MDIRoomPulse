@@ -7,12 +7,7 @@ export async function POST(request: Request) {
   try {
     const { to, subject, html, from } = await request.json()
 
-    // ✅ Toujours utiliser le domaine Resend en production
-    const isProduction = process.env.NODE_ENV === 'production'
-    const fromEmail = isProduction 
-      ? 'MDI RoomPulse <onboarding@resend.dev>'
-      : from || 'MDI RoomPulse <onboarding@resend.dev>'
-    
+    const fromEmail = 'MDI RoomPulse <onboarding@resend.dev>'
     const replyTo = from || 'mdi-roompulse@mdi.com'
 
     console.log('📧 Sending from:', fromEmail)
@@ -21,10 +16,13 @@ export async function POST(request: Request) {
 
     const { data, error } = await resend.emails.send({
       from: fromEmail,
-      reply_to: replyTo,
+      // ✅ Supprime reply_to et utilise replyTo dans le body du mail
       to: to,
       subject: subject,
       html: html,
+      headers: {
+        'Reply-To': replyTo  // ✅ Utilise les headers pour le reply-to
+      }
     })
 
     if (error) {
