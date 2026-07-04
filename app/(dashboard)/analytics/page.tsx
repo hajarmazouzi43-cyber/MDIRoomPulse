@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Legend } from 'recharts'
 
 export default function AnalyticsPage() {
   const [stats, setStats] = useState({
@@ -13,6 +14,7 @@ export default function AnalyticsPage() {
     totalSubscriptions: 0,
     totalHistory: 0
   })
+  const [roomData, setRoomData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
@@ -29,6 +31,10 @@ export default function AnalyticsPage() {
     const { count: totalSubscriptions } = await supabase.from('subscriptions').select('*', { count: 'exact', head: true })
     const { count: totalHistory } = await supabase.from('room_history').select('*', { count: 'exact', head: true })
 
+    const { data: rooms } = await supabase
+      .from('rooms')
+      .select('name, current_people, max_people, is_occupied')
+
     setStats({
       totalRooms: totalRooms || 0,
       occupiedRooms: occupiedRooms || 0,
@@ -37,16 +43,33 @@ export default function AnalyticsPage() {
       totalSubscriptions: totalSubscriptions || 0,
       totalHistory: totalHistory || 0
     })
+
+    if (rooms) {
+      setRoomData(rooms.map(r => ({
+        name: r.name.length > 12 ? r.name.slice(0, 10) + '..' : r.name,
+        occupied: r.current_people || 0,
+        available: (r.max_people || 1) - (r.current_people || 0),
+        isOccupied: r.is_occupied
+      })))
+    }
+
     setLoading(false)
   }
+
+  // Données pour le PieChart
+  const pieData = [
+    { name: 'Free', value: stats.freeRooms },
+    { name: 'Occupied', value: stats.occupiedRooms },
+  ]
+  const COLORS = ['#10B981', '#EF4444']
 
   if (loading) {
     return (
       <div className="container mx-auto py-8 px-4">
         <div className="animate-pulse">
           <div className="h-8 bg-gray-200 rounded w-48 mb-6"></div>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
-            {[1,2,3,4,5].map(i => <div key={i} className="h-24 bg-gray-200 rounded"></div>)}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[1,2].map(i => <div key={i} className="h-64 bg-gray-200 rounded"></div>)}
           </div>
         </div>
       </div>
@@ -59,83 +82,52 @@ export default function AnalyticsPage() {
         📊 Analytics
       </h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Graphique à barres */}
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Total Rooms</CardTitle>
+          <CardHeader>
+            <CardTitle>👥 People per Room</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{stats.totalRooms}</p>
+          <CardContent className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={roomData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="occupied" stackId="a" fill="#EF4444" name="Occupied" />
+                <Bar dataKey="available" stackId="a" fill="#10B981" name="Available" />
+              </BarChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-green-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">🟢 Free</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-green-500">{stats.freeRooms}</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-red-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">🔴 Occupied</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-red-500">{stats.occupiedRooms}</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-blue-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">👤 Users</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-blue-500">{stats.totalUsers}</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-purple-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">🔔 Subscriptions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-purple-500">{stats.totalSubscriptions}</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Deuxième ligne : Historique */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-        <Card className="border-l-4 border-orange-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">📝 History Logs</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-orange-500">{stats.totalHistory}</p>
-          </CardContent>
-        </Card>
-
+        {/* Camembert */}
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">📈 Occupancy Rate</CardTitle>
+          <CardHeader>
+            <CardTitle>📊 Rooms Status</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">
-              {stats.totalRooms > 0 ? Math.round((stats.occupiedRooms / stats.totalRooms) * 100) : 0}%
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">📊 Subscriptions per Room</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">
-              {stats.totalRooms > 0 ? (stats.totalSubscriptions / stats.totalRooms).toFixed(1) : 0}
-            </p>
+          <CardContent className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
