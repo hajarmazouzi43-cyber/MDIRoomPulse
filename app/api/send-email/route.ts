@@ -1,10 +1,23 @@
 import { Resend } from 'resend'
 import { NextResponse } from 'next/server'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+// ✅ Récupérer la clé API
+const RESEND_API_KEY = process.env.RESEND_API_KEY
+
+// ✅ Créer l'instance Resend uniquement si la clé existe
+const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null
 
 export async function POST(request: Request) {
   try {
+    // ✅ Vérifier que Resend est configuré
+    if (!resend) {
+      console.error('❌ RESEND_API_KEY is not configured')
+      return NextResponse.json(
+        { error: 'Email service not configured' },
+        { status: 500 }
+      )
+    }
+
     const { to, subject, html, from } = await request.json()
 
     const fromEmail = 'MDI RoomPulse <onboarding@resend.dev>'
@@ -16,12 +29,11 @@ export async function POST(request: Request) {
 
     const { data, error } = await resend.emails.send({
       from: fromEmail,
-      // ✅ Supprime reply_to et utilise replyTo dans le body du mail
       to: to,
       subject: subject,
       html: html,
       headers: {
-        'Reply-To': replyTo  // ✅ Utilise les headers pour le reply-to
+        'Reply-To': replyTo
       }
     })
 
