@@ -56,7 +56,6 @@ export default function AnalyticsPage() {
     setLoading(false)
   }
 
-  // Données pour le PieChart
   const pieData = [
     { name: 'Free', value: stats.freeRooms },
     { name: 'Occupied', value: stats.occupiedRooms },
@@ -83,7 +82,6 @@ export default function AnalyticsPage() {
       </h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Graphique à barres */}
         <Card>
           <CardHeader>
             <CardTitle>👥 People per Room</CardTitle>
@@ -102,7 +100,6 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        {/* Camembert */}
         <Card>
           <CardHeader>
             <CardTitle>📊 Rooms Status</CardTitle>
@@ -115,7 +112,7 @@ export default function AnalyticsPage() {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
