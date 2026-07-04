@@ -10,36 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { toast } from 'sonner'
 
-<Button
-  onClick={async () => {
-    try {
-      console.log('🔍 Sending test email...')
-      const response = await fetch('/api/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          from: 'bureauceo@mdi.com',
-          to: 'hajarmazouzi43@gmail.com',
-          subject: 'Test direct depuis le bouton',
-          html: '<h1>🎉 Test réussi depuis le bouton !</h1>'
-        })
-      })
-      const result = await response.json()
-      console.log('📧 Result:', result)
-      if (result.success) {
-        alert('✅ Email envoyé avec succès ! Vérifie ta boîte.')
-      } else {
-        alert('❌ Erreur: ' + (result.error || 'Inconnue'))
-      }
-    } catch (error: any) {
-      console.error('❌ Error:', error)
-      alert('❌ Erreur: ' + error.message)
-    }
-  }}
-  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
->
-  Test Email
-</Button>
+
 export default function AdminPage() {
   const [rooms, setRooms] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
@@ -72,21 +43,26 @@ export default function AdminPage() {
   }
 
 const handleSubmit = async () => {
-  console.log('Form data:', formData)
-  console.log('Editing room:', editingRoom)
-
   try {
-    const data = {
+    const data: any = {
       name: formData.name.trim(),
       capacity: Number(formData.capacity) || 1,
-      max_people: Number(formData.max_people) || Number(formData.capacity) || 1,  // ← ICI
       equipment: formData.equipment ? formData.equipment.split(',').map(s => s.trim()).filter(Boolean) : [],
       location: formData.location?.trim() || '',
       category: formData.category || 'poste',
-      room_email: formData.room_email?.trim() || formData.name.toLowerCase().replace(/\s/g, '') + '@mdi.com'
     }
 
-    console.log('Data to save:', data)
+    // ✅ Ajouter max_people seulement si la colonne existe
+    if (formData.max_people) {
+      data.max_people = Number(formData.max_people)
+    }
+
+    // ✅ Ajouter room_email seulement si la colonne existe
+    if (formData.room_email) {
+      data.room_email = formData.room_email.trim()
+    }
+
+    console.log('📤 Data to save:', data)
 
     let error
     if (editingRoom) {
@@ -103,7 +79,7 @@ const handleSubmit = async () => {
     }
 
     if (error) {
-      console.error('Supabase error:', error)
+      console.error('❌ Supabase error:', error)
       toast.error('Error saving room: ' + error.message)
     } else {
       toast.success(editingRoom ? 'Room updated!' : 'Room added!')
@@ -113,7 +89,7 @@ const handleSubmit = async () => {
       setFormData({ name: '', capacity: '', equipment: '', location: '', category: 'poste', max_people: '', room_email: '' })
     }
   } catch (error: any) {
-    console.error('Error:', error)
+    console.error('❌ Error:', error)
     toast.error('Error saving room: ' + error.message)
   }
 }
