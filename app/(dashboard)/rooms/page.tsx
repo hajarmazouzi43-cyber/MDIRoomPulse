@@ -19,8 +19,10 @@ interface Room {
   location: string
   category: string
   is_occupied: boolean
+  is_confidential: boolean
   occupied_by: string | null
   occupied_at: string | null
+  occupied_until: string | null
   created_at: string
   updated_at: string
   max_people: number
@@ -38,27 +40,25 @@ export default function RoomsPage() {
     fetchRooms()
     getUser()
 
-      // ✅ Realtime
-  const channel = supabase
-    .channel('rooms-changes')
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'rooms'
-      },
-      () => {
-        console.log('🔄 Room changed, refreshing...')
-        fetchRooms()
-      }
-    )
-    .subscribe()
+    const channel = supabase
+      .channel('rooms-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'rooms'
+        },
+        () => {
+          console.log('🔄 Room changed, refreshing...')
+          fetchRooms()
+        }
+      )
+      .subscribe()
 
-  return () => {
-    supabase.removeChannel(channel)
-  }
-  
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   const getUser = async () => {
@@ -82,63 +82,66 @@ export default function RoomsPage() {
   const allOccupied = rooms.filter(r => r.category !== 'detente').every(r => r.is_occupied)
   const hasFreeRooms = rooms.some(r => r.category !== 'detente' && !r.is_occupied)
 
-const occupyRoom = async (roomId: string, roomName: string, peopleCount: number = 1) => {
-  if (!user) {
-    toast.error('Please sign in to occupy a room')
-    return
-  }
-
-  console.log('📊 Occupying:', { roomId, roomName, peopleCount })
-
-  const { data: room } = await supabase
-    .from('rooms')
-    .select('max_people, current_people')
-    .eq('id', roomId)
-    .single()
-
-  console.log('📊 Room data:', room)
-
-  if (!room) {
-    toast.error('Room not found')
-    return
-  }
-
-  const maxPeople = room.max_people || 1
-  const currentPeople = room.current_people || 0
-
-  if (currentPeople >= maxPeople) {
-    toast.error(`Room is full (${currentPeople}/${maxPeople})`)
-    return
-  }
-
-  const newTotal = Math.min(currentPeople + peopleCount, maxPeople)
-  console.log('📊 New total:', newTotal)
-
-  const { error } = await supabase
-    .from('rooms')
-    .update({
-      is_occupied: true,
-      occupied_by: user.id,
-      occupied_at: new Date().toISOString(),
-      current_people: newTotal
-    })
-    .eq('id', roomId)
-
-  console.log('📊 Update error:', error)
-
-  if (error) {
-    toast.error('Error occupying room')
-  } else {
-    toast.success(`${roomName}: ${newTotal}/${maxPeople} people`)
-    
-    const result = await notifyRoomStatusChange(roomId, 'occupied')
-    if (result.email > 0 || result.whatsapp > 0) {
-      toast.info(` ${result.email + result.whatsapp} subscribers notified`)
+  const occupyRoomWithTime = async (roomId: string, roomName: string, peopleCount: number = 1, startTime: string, endTime: string) => {
+    if (!user) {
+      toast.error('Please sign in to occupy a room')
+      return
     }
-    
-    fetchRooms()
+
+    const { data: room } = await supabase
+      .from('rooms')
+      .select('max_people, current_people')
+      .eq('id', roomId)
+      .single()
+
+    if (!room) {
+      toast.error('Room not found')
+      return
+    }
+
+    const maxPeople = room.max_people || 1
+    const currentPeople = room.current_people || 0
+
+    if (currentPeople >= maxPeople) {
+      toast.error(`Room is full (${currentPeople}/${maxPeople})`)
+      return
+    }
+
+    const newTotal = Math.min(currentPeople + peopleCount, maxPeople)
+
+    const today = new Date().toISOString().split('T')[0]
+    const startDateTime = new Date(`${today}T${startTime}:00`)
+    const endDateTime = new Date(`${today}T${endTime}:00`)
+
+    if (endDateTime < startDateTime) {
+      endDateTime.setDate(endDateTime.getDate() + 1)
+    }
+
+    const { error } = await supabase
+      .from('rooms')
+      .update({
+        is_occupied: true,
+        occupied_by: user.id,
+        occupied_at: startDateTime.toISOString(),
+        current_people: newTotal,
+        occupied_until: endDateTime.toISOString(),
+        occupation_duration: Math.round((endDateTime.getTime() - startDateTime.getTime()) / 60000)
+      })
+      .eq('id', roomId)
+
+    if (error) {
+      toast.error('Error occupying room')
+    } else {
+      toast.success(`${roomName}: ${newTotal}/${maxPeople} people from ${startTime} to ${endTime}`)
+      
+      const result = await notifyRoomStatusChange(roomId, 'occupied')
+      if (result.email > 0 || result.whatsapp > 0) {
+        toast.info(`📢 ${result.email + result.whatsapp} subscribers notified`)
+      }
+      
+      fetchRooms()
+    }
   }
-}
 
   const freeRoom = async (roomId: string, roomName: string) => {
     const { error } = await supabase
@@ -147,6 +150,7 @@ const occupyRoom = async (roomId: string, roomName: string, peopleCount: number 
         is_occupied: false,
         occupied_by: null,
         occupied_at: null,
+        occupied_until: null,
         current_people: 0
       })
       .eq('id', roomId)
@@ -251,7 +255,12 @@ const occupyRoom = async (roomId: string, roomName: string, peopleCount: number 
           const isDetente = room.category === 'detente'
           
           return (
-            <Card key={room.id} className={`hover:shadow-lg transition-shadow ${room.is_occupied ? 'border-red-300 bg-red-50' : 'border-green-300 bg-green-50'}`}>
+            <Card key={room.id} className={`hover:shadow-lg transition-shadow ${room.is_occupied ? 'border-red-300 bg-red-50' : 'border-green-300 bg-green-50'} relative`}>
+              {room.is_confidential && (
+                <div className="absolute top-0 right-0 bg-red-500 text-white text-xs px-2 py-1 rounded-bl-lg rounded-tr-lg">
+                  🔒 Confidential
+                </div>
+              )}
               <CardHeader className="pb-2">
                 <CardTitle className="flex justify-between items-center">
                   <span className="flex items-center gap-2">
@@ -293,36 +302,63 @@ const occupyRoom = async (roomId: string, roomName: string, peopleCount: number 
                 {!isDetente && user && (
                   <div className="flex gap-2 mt-2">
                     {!room.is_occupied ? (
-                      <div className="flex gap-2 w-full">
-                        <input
-                          type="number"
-                          min={1}
-                          max={(room.max_people || 1) - (room.current_people || 0)}
-                          defaultValue={1}
-                          className="w-16 h-10 text-center border rounded-lg"
-                          id={`people-${room.id}`}
-                        />
-                        <Button
-                          onClick={() => {
-                            const input = document.getElementById(`people-${room.id}`) as HTMLInputElement
-                            const count = parseInt(input?.value) || 1
-                            occupyRoom(room.id, room.name, count)
-                          }}
-                          className="flex-1 bg-green-600 hover:bg-green-700"
-                        >
-                          Occupy
-                        </Button>
+                      <div className="flex flex-col gap-2 w-full">
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            min={1}
+                            max={(room.max_people || 1) - (room.current_people || 0)}
+                            defaultValue={1}
+                            className="w-16 h-10 text-center border rounded-lg"
+                            id={`people-${room.id}`}
+                          />
+                          <input
+                            type="time"
+                            defaultValue="13:00"
+                            className="w-24 h-10 text-center border rounded-lg"
+                            id={`start-time-${room.id}`}
+                          />
+                          <input
+                            type="time"
+                            defaultValue="16:00"
+                            className="w-24 h-10 text-center border rounded-lg"
+                            id={`end-time-${room.id}`}
+                          />
+                          <Button
+                            onClick={() => {
+                              const peopleInput = document.getElementById(`people-${room.id}`) as HTMLInputElement
+                              const startInput = document.getElementById(`start-time-${room.id}`) as HTMLInputElement
+                              const endInput = document.getElementById(`end-time-${room.id}`) as HTMLInputElement
+                              const count = parseInt(peopleInput?.value) || 1
+                              const startTime = startInput?.value || '13:00'
+                              const endTime = endInput?.value || '16:00'
+                              occupyRoomWithTime(room.id, room.name, count, startTime, endTime)
+                            }}
+                            className="flex-1 bg-green-600 hover:bg-green-700"
+                          >
+                            Occupy
+                          </Button>
+                        </div>
+                        <span className="text-xs text-gray-400">People | Start | End</span>
                       </div>
                     ) : (
-                      <div className="flex gap-2 w-full">
-                        <div className="flex items-center justify-center bg-gray-100 rounded-lg px-3 text-sm font-medium min-w-[60px]">
-                          {room.current_people || 0}/{room.max_people || room.capacity || 1}
+                      <div className="flex flex-col gap-2 w-full">
+                        <div className="flex items-center justify-between bg-gray-100 rounded-lg px-3 py-2">
+                          <span className="text-sm font-medium">
+                            {room.current_people || 0}/{room.max_people || room.capacity || 1} people
+                          </span>
+                          {room.occupied_at && room.occupied_until && (
+                            <span className="text-sm text-gray-500">
+                              ⏱️ {new Date(room.occupied_at).toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})} 
+                              → {new Date(room.occupied_until).toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})}
+                            </span>
+                          )}
                         </div>
                         <Button
                           onClick={() => freeRoom(room.id, room.name)}
-                          className="flex-1 bg-red-600 hover:bg-red-700"
+                          className="w-full bg-red-600 hover:bg-red-700"
                         >
-                          Free
+                          Free & Notify
                         </Button>
                       </div>
                     )}
@@ -352,6 +388,7 @@ const occupyRoom = async (roomId: string, roomName: string, peopleCount: number 
           <span className="ml-4">Available: <span className="font-bold">{rooms.filter(r => !r.is_occupied && r.category !== 'detente').length}</span></span>
           <span className="ml-4">Occupied: <span className="font-bold">{rooms.filter(r => r.is_occupied).length}</span></span>
           <span className="ml-4">Lounge: <span className="font-bold">{rooms.filter(r => r.category === 'detente').length}</span></span>
+          <span className="ml-4">🔒: <span className="font-bold">{rooms.filter(r => r.is_confidential).length}</span></span>
         </p>
       </div>
     </div>

@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import SubscribeButton from '@/components/rooms/SubscribeButton'
 import Link from 'next/link'
+import RoomQRCode from '@/components/rooms/RoomQRCode'
 
 export default async function RoomDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -79,7 +80,9 @@ export default async function RoomDetailPage({ params }: { params: Promise<{ id:
                 </div>
               </div>
             )}
-
+            <div className="mt-6 flex justify-center">
+  <RoomQRCode roomId={room.id} roomName={room.name} />
+</div>
             <div className="border-t pt-4">
               <p className="text-sm text-gray-500">Subscribers</p>
               <p className="text-lg font-semibold">{subscribers || 0} subscriber{subscribers && subscribers > 1 ? 's' : ''}</p>
