@@ -77,11 +77,11 @@ export default function RoomChart() {
         <XAxis dataKey="name" />
         <YAxis />
         <Tooltip 
-          formatter={(value: any, name: string) => {
-            if (name === 'occupied') return [`${value} people`, 'Occupied']
-            if (name === 'available') return [`${value} people`, 'Available']
-            return [value, name]
+          formatter={(value: any) => {
+            if (typeof value === 'number') return [`${value} people`]
+            return [value]
           }}
+          labelFormatter={(label: any) => `Room: ${label}`}
         />
         <Bar dataKey="occupied" stackId="a" fill="#EF4444" name="Occupied" />
         <Bar dataKey="available" stackId="a" fill="#10B981" name="Available" />
