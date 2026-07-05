@@ -12,6 +12,7 @@ export default function ExecutivePage() {
 
   useEffect(() => {
     fetchRooms()
+    
     const channel = supabase
       .channel('rooms-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'rooms' }, () => {
@@ -19,8 +20,13 @@ export default function ExecutivePage() {
         setLastUpdate(new Date())
       })
       .subscribe()
-    return () => supabase.removeChannel(channel)
-  }, [])
+
+    // ✅ Nettoyer correctement
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  // ✅ Ajouter supabase comme dépendance
+  }, [supabase])
 
   const fetchRooms = async () => {
     const { data } = await supabase.from('rooms').select('*').order('name')
