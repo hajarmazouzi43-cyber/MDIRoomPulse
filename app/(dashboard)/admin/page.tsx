@@ -10,11 +10,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import { generateReport } from '@/lib/reports'
+import { PDFDownloadLink } from '@react-pdf/renderer'
+import ReportPDF from '@/components/ReportPDF'
 
 export default function AdminPage() {
   const [rooms, setRooms] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
+  const [history, setHistory] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingRoom, setEditingRoom] = useState<any>(null)
@@ -39,8 +41,15 @@ export default function AdminPage() {
     setLoading(true)
     const { data: roomsData } = await supabase.from('rooms').select('*').order('name')
     const { data: usersData } = await supabase.from('profiles').select('*')
+    const { data: historyData } = await supabase
+      .from('room_history')
+      .select('*, rooms(name)')
+      .order('changed_at', { ascending: false })
+      .limit(50)
+    
     if (roomsData) setRooms(roomsData)
     if (usersData) setUsers(usersData)
+    if (historyData) setHistory(historyData)
     setLoading(false)
   }
 
@@ -121,7 +130,8 @@ export default function AdminPage() {
     totalUsers: users.length,
     occupiedRooms: rooms.filter(r => r.is_occupied).length,
     freeRooms: rooms.filter(r => !r.is_occupied).length,
-    confidentialRooms: rooms.filter(r => r.is_confidential).length
+    confidentialRooms: rooms.filter(r => r.is_confidential).length,
+    totalHistory: history.length
   }
 
   if (loading) {
@@ -143,22 +153,29 @@ export default function AdminPage() {
       <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
         <h1 className="text-3xl font-bold text-[#0056B3]">Admin Dashboard</h1>
         <div className="flex gap-2">
-          <Button
-            onClick={async () => {
-              const report = await generateReport()
-              const blob = new Blob([report], { type: 'text/plain' })
-              const url = URL.createObjectURL(blob)
-              const a = document.createElement('a')
-              a.href = url
-              a.download = `report-${new Date().toISOString().split('T')[0]}.txt`
-              a.click()
-              URL.revokeObjectURL(url)
-              toast.success('Report downloaded')
-            }}
-            className="bg-blue-600 hover:bg-blue-700"
+          <PDFDownloadLink
+            document={
+              <ReportPDF 
+                rooms={rooms} 
+                history={history} 
+                stats={{
+                  totalRooms: rooms.length,
+                  occupiedRooms: rooms.filter(r => r.is_occupied).length,
+                  freeRooms: rooms.filter(r => !r.is_occupied).length,
+                  totalUsers: users.length,
+                  totalSubscriptions: rooms.reduce((acc, r) => acc + (r.subscribers_count || 0), 0),
+                  totalHistory: history.length
+                }}
+              />
+            }
+            fileName={`report-${new Date().toISOString().split('T')[0]}.pdf`}
           >
-            📄 Generate Report
-          </Button>
+            {({ loading }) => (
+              <Button disabled={loading} className="bg-blue-600 hover:bg-blue-700">
+                {loading ? 'Generating...' : '📄 Generate PDF'}
+              </Button>
+            )}
+          </PDFDownloadLink>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button className="bg-[#0056B3] hover:bg-[#00449E]">
