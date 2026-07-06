@@ -152,30 +152,18 @@ export default function AdminPage() {
       <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
         <h1 className="text-3xl font-bold text-[#0056B3]">Admin Dashboard</h1>
         <div className="flex gap-2">
-          <PDFDownloadLink
-            document={
-              <ReportPDF 
-                rooms={rooms} 
-                history={history} 
-                stats={{
-                  totalRooms: rooms.length,
-                  occupiedRooms: rooms.filter(r => r.is_occupied).length,
-                  freeRooms: rooms.filter(r => !r.is_occupied).length,
-                  totalUsers: users.length,
-                  totalSubscriptions: rooms.reduce((acc, r) => acc + (r.subscribers_count || 0), 0),
-                  totalHistory: history.length
-                }}
-              />
-            }
-            fileName={`report-${new Date().toISOString().split('T')[0]}.pdf`}
-          >
-            {({ loading }) => (
-              <Button disabled={loading} className="bg-blue-600 hover:bg-blue-700">
-                {loading ? 'Generating...' : '📄 Generate PDF'}
-              </Button>
-            )}
-          </PDFDownloadLink>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <ReportPDF 
+  rooms={rooms} 
+  history={history} 
+  stats={{
+    totalRooms: rooms.length,
+    occupiedRooms: rooms.filter(r => r.is_occupied).length,
+    freeRooms: rooms.filter(r => !r.is_occupied).length,
+    totalUsers: users.length,
+    totalSubscriptions: rooms.reduce((acc, r) => acc + (r.subscribers_count || 0), 0),
+    totalHistory: history.length
+  }}
+/>          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button className="bg-[#0056B3] hover:bg-[#00449E]">
                 {editingRoom ? 'Edit Room' : 'Add Room'}
