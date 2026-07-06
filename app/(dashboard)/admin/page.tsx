@@ -10,7 +10,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import { PDFDownloadLink } from '@react-pdf/renderer'
 import ReportPDF from '@/components/ReportPDF'
 
 export default function AdminPage() {
