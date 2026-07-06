@@ -3,8 +3,6 @@
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import jsPDF from 'jspdf'
-// ✅ Import correct pour jspdf-autotable
-import 'jspdf-autotable'
 
 interface ReportPDFProps {
   rooms: any[]
@@ -24,67 +22,70 @@ export default function ReportPDF({ rooms, history, stats }: ReportPDFProps) {
     try {
       const doc = new jsPDF()
       const pageWidth = doc.internal.pageSize.getWidth()
-      
+      let y = 20
+
       // Title
       doc.setFontSize(20)
       doc.setTextColor('#0056B3')
-      doc.text('MDI RoomPulse', pageWidth / 2, 20, { align: 'center' })
-      
+      doc.text('MDI RoomPulse', pageWidth / 2, y, { align: 'center' })
+      y += 10
+
       doc.setFontSize(12)
       doc.setTextColor('#666')
-      doc.text('Room Usage Report', pageWidth / 2, 30, { align: 'center' })
-      
+      doc.text('Room Usage Report', pageWidth / 2, y, { align: 'center' })
+      y += 15
+
       // Stats
       doc.setFontSize(14)
       doc.setTextColor('#0056B3')
-      doc.text('General Statistics', 20, 45)
-      
-      const statsData = [
-        ['Total Rooms', stats.totalRooms],
-        ['Free Rooms', stats.freeRooms],
-        ['Occupied Rooms', stats.occupiedRooms],
-        ['Total Users', stats.totalUsers],
-        ['Total History', stats.totalHistory],
-      ]
-      
-      // ✅ Utiliser autoTable comme méthode sur doc
-      ;(doc as any).autoTable({
-        startY: 50,
-        head: [['Statistic', 'Value']],
-        body: statsData,
-        theme: 'striped',
-        headStyles: { fillColor: '#0056B3' },
-        styles: { fontSize: 10 },
+      doc.text('General Statistics', 20, y)
+      y += 10
+
+      doc.setFontSize(10)
+      doc.setTextColor('#333')
+      doc.text(`Total Rooms: ${stats.totalRooms}`, 20, y)
+      y += 7
+      doc.text(`Free Rooms: ${stats.freeRooms}`, 20, y)
+      y += 7
+      doc.text(`Occupied Rooms: ${stats.occupiedRooms}`, 20, y)
+      y += 7
+      doc.text(`Total Users: ${stats.totalUsers}`, 20, y)
+      y += 7
+      doc.text(`Total History: ${stats.totalHistory}`, 20, y)
+      y += 15
+
+      // Rooms List
+      doc.setFontSize(14)
+      doc.setTextColor('#0056B3')
+      doc.text('Room List', 20, y)
+      y += 10
+
+      doc.setFontSize(9)
+      doc.setTextColor('#333')
+      rooms.slice(0, 20).forEach((room: any, index: number) => {
+        if (y > 270) {
+          doc.addPage()
+          y = 20
+        }
+        const status = room.is_occupied ? 'Occupied' : 'Free'
+        const people = `${room.current_people || 0}/${room.max_people || room.capacity || 1}`
+        const name = room.name || 'Unknown'
+        doc.text(`${index + 1}. ${name} - ${status} - ${people} people`, 20, y)
+        y += 7
       })
-      
-      // Rooms Table
-      const roomData = rooms.slice(0, 20).map((room: any) => [
-        room.name || 'Unknown',
-        room.is_occupied ? 'Occupied' : 'Free',
-        `${room.current_people || 0}/${room.max_people || room.capacity || 1}`
-      ])
-      
-      ;(doc as any).autoTable({
-        startY: (doc as any).lastAutoTable?.finalY + 10 || 100,
-        head: [['Room', 'Status', 'People']],
-        body: roomData,
-        theme: 'striped',
-        headStyles: { fillColor: '#0056B3' },
-        styles: { fontSize: 9 },
-      })
-      
+
       // Footer
       doc.setFontSize(8)
       doc.setTextColor('#999')
-      const footerY = (doc as any).lastAutoTable?.finalY + 15 || 270
-      doc.text(`Generated on ${new Date().toLocaleString()}`, pageWidth / 2, footerY, { align: 'center' })
-      doc.text('2026 MDI RoomPulse - ENSA Berrechid', pageWidth / 2, footerY + 5, { align: 'center' })
-      
+      doc.text(`Generated on ${new Date().toLocaleString()}`, pageWidth / 2, 280, { align: 'center' })
+      doc.text('© 2026 MDI RoomPulse - ENSA Berrechid', pageWidth / 2, 285, { align: 'center' })
+
+      // Sauvegarder le PDF
       doc.save(`report-${new Date().toISOString().split('T')[0]}.pdf`)
       toast.success('PDF downloaded successfully!')
     } catch (error) {
       console.error('PDF Error:', error)
-      toast.error('Error generating PDF: ' + (error as Error).message)
+      toast.error('Error generating PDF')
     }
   }
 

@@ -152,7 +152,7 @@ export default function AdminPage() {
       <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
         <h1 className="text-3xl font-bold text-[#0056B3]">Admin Dashboard</h1>
         <div className="flex gap-2">
-          <ReportPDF 
+<ReportPDF 
   rooms={rooms} 
   history={history} 
   stats={{
@@ -163,7 +163,8 @@ export default function AdminPage() {
     totalSubscriptions: rooms.reduce((acc, r) => acc + (r.subscribers_count || 0), 0),
     totalHistory: history.length
   }}
-/>          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+/>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button className="bg-[#0056B3] hover:bg-[#00449E]">
                 {editingRoom ? 'Edit Room' : 'Add Room'}
