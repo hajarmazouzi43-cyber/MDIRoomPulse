@@ -3,15 +3,27 @@
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import jsPDF from 'jspdf'
+// ✅ Import correct pour jspdf-autotable
 import 'jspdf-autotable'
+
+interface ReportPDFProps {
+  rooms: any[]
+  history: any[]
+  stats: {
+    totalRooms: number
+    occupiedRooms: number
+    freeRooms: number
+    totalUsers: number
+    totalSubscriptions: number
+    totalHistory: number
+  }
+}
 
 export default function ReportPDF({ rooms, history, stats }: ReportPDFProps) {
   const generatePDF = () => {
     try {
       const doc = new jsPDF()
       const pageWidth = doc.internal.pageSize.getWidth()
-      
-      doc.setFont('helvetica')
       
       // Title
       doc.setFontSize(20)
@@ -35,7 +47,8 @@ export default function ReportPDF({ rooms, history, stats }: ReportPDFProps) {
         ['Total History', stats.totalHistory],
       ]
       
-      doc.autoTable({
+      // ✅ Utiliser autoTable comme méthode sur doc
+      ;(doc as any).autoTable({
         startY: 50,
         head: [['Statistic', 'Value']],
         body: statsData,
@@ -45,13 +58,13 @@ export default function ReportPDF({ rooms, history, stats }: ReportPDFProps) {
       })
       
       // Rooms Table
-      const roomData = rooms.slice(0, 20).map(room => [
-        room.name,
+      const roomData = rooms.slice(0, 20).map((room: any) => [
+        room.name || 'Unknown',
         room.is_occupied ? 'Occupied' : 'Free',
         `${room.current_people || 0}/${room.max_people || room.capacity || 1}`
       ])
       
-      doc.autoTable({
+      ;(doc as any).autoTable({
         startY: (doc as any).lastAutoTable?.finalY + 10 || 100,
         head: [['Room', 'Status', 'People']],
         body: roomData,
@@ -63,14 +76,15 @@ export default function ReportPDF({ rooms, history, stats }: ReportPDFProps) {
       // Footer
       doc.setFontSize(8)
       doc.setTextColor('#999')
-      doc.text(`Generated on ${new Date().toLocaleString()}`, pageWidth / 2, 285, { align: 'center' })
-      doc.text('2026 MDI RoomPulse - ENSA Berrechid', pageWidth / 2, 290, { align: 'center' })
+      const footerY = (doc as any).lastAutoTable?.finalY + 15 || 270
+      doc.text(`Generated on ${new Date().toLocaleString()}`, pageWidth / 2, footerY, { align: 'center' })
+      doc.text('2026 MDI RoomPulse - ENSA Berrechid', pageWidth / 2, footerY + 5, { align: 'center' })
       
       doc.save(`report-${new Date().toISOString().split('T')[0]}.pdf`)
       toast.success('PDF downloaded successfully!')
     } catch (error) {
       console.error('PDF Error:', error)
-      toast.error('Error generating PDF')
+      toast.error('Error generating PDF: ' + (error as Error).message)
     }
   }
 
