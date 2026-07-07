@@ -20,25 +20,27 @@ interface ReportPDFProps {
 export default function ReportPDF({ rooms, history, stats }: ReportPDFProps) {
   const generatePDF = () => {
     try {
-      const doc = new jsPDF('l', 'mm', 'a4')
+      // ✅ Format portrait (par défaut)
+      const doc = new jsPDF('p', 'mm', 'a4')
       const pageWidth = doc.internal.pageSize.getWidth()
-      let y = 20
+      const pageHeight = doc.internal.pageSize.getHeight()
+      let y = 15
 
-      // Helper pour dessiner un tableau simple
-      const drawTable = (headers: string[], data: any[][], startY: number, colors?: any) => {
-        const colWidth = (pageWidth - 40) / headers.length
+      // Helper pour dessiner un tableau
+      const drawTable = (headers: string[], data: any[][], startY: number) => {
+        const colWidth = (pageWidth - 30) / headers.length
         let currentY = startY
 
         // En-têtes
         doc.setFillColor('#0056B3')
-        doc.rect(20, currentY, pageWidth - 40, 8, 'F')
+        doc.rect(15, currentY, pageWidth - 30, 8, 'F')
         doc.setTextColor('#FFFFFF')
-        doc.setFontSize(10)
+        doc.setFontSize(9)
         doc.setFont('helvetica', 'bold')
         
         headers.forEach((header, i) => {
-          const x = 20 + i * colWidth
-          doc.text(header, x + 2, currentY + 5.5)
+          const x = 15 + i * colWidth
+          doc.text(header, x + 1, currentY + 5.5)
         })
 
         currentY += 8
@@ -46,15 +48,37 @@ export default function ReportPDF({ rooms, history, stats }: ReportPDFProps) {
 
         // Lignes de données
         data.forEach((row, rowIndex) => {
+          // Vérifier si on doit ajouter une page
+          if (currentY > pageHeight - 20) {
+            doc.addPage()
+            currentY = 15
+            // Re-dessiner l'en-tête sur la nouvelle page
+            doc.setFillColor('#0056B3')
+            doc.rect(15, currentY, pageWidth - 30, 8, 'F')
+            doc.setTextColor('#FFFFFF')
+            doc.setFontSize(9)
+            doc.setFont('helvetica', 'bold')
+            headers.forEach((header, i) => {
+              const x = 15 + i * colWidth
+              doc.text(header, x + 1, currentY + 5.5)
+            })
+            currentY += 8
+            doc.setFont('helvetica', 'normal')
+          }
+
           const isEven = rowIndex % 2 === 0
           doc.setFillColor(isEven ? '#F5F5F5' : '#FFFFFF')
-          doc.rect(20, currentY, pageWidth - 40, 7, 'F')
+          doc.rect(15, currentY, pageWidth - 30, 7, 'F')
 
           row.forEach((cell, cellIndex) => {
-            const x = 20 + cellIndex * colWidth
+            const x = 15 + cellIndex * colWidth
             doc.setTextColor('#333')
-            doc.setFontSize(9)
-            doc.text(String(cell), x + 2, currentY + 5)
+            doc.setFontSize(8)
+            // Tronquer les textes trop longs
+            const cellText = String(cell)
+            const maxChars = Math.floor((colWidth - 2) / 1.5)
+            const displayText = cellText.length > maxChars ? cellText.slice(0, maxChars - 3) + '...' : cellText
+            doc.text(displayText, x + 1, currentY + 5)
           })
 
           currentY += 7
@@ -64,26 +88,26 @@ export default function ReportPDF({ rooms, history, stats }: ReportPDFProps) {
       }
 
       // ==================== HEADER ====================
-      doc.setFontSize(24)
+      doc.setFontSize(22)
       doc.setTextColor('#0056B3')
       doc.text('MDI RoomPulse', pageWidth / 2, y, { align: 'center' })
-      y += 10
+      y += 8
 
-      doc.setFontSize(14)
+      doc.setFontSize(13)
       doc.setTextColor('#666')
       doc.text('Room Usage Report', pageWidth / 2, y, { align: 'center' })
-      y += 15
+      y += 12
 
       doc.setDrawColor('#0056B3')
       doc.setLineWidth(0.5)
-      doc.line(20, y, pageWidth - 20, y)
-      y += 10
+      doc.line(15, y, pageWidth - 15, y)
+      y += 8
 
       // ==================== STATS ====================
-      doc.setFontSize(16)
+      doc.setFontSize(14)
       doc.setTextColor('#0056B3')
-      doc.text('General Statistics', 20, y)
-      y += 10
+      doc.text('General Statistics', 15, y)
+      y += 8
 
       const statsData = [
         ['Total Rooms', stats.totalRooms],
@@ -95,15 +119,21 @@ export default function ReportPDF({ rooms, history, stats }: ReportPDFProps) {
       ]
 
       y = drawTable(['Statistic', 'Value'], statsData, y)
-      y += 10
+      y += 8
 
       // ==================== ROOMS ====================
-      doc.setFontSize(16)
-      doc.setTextColor('#0056B3')
-      doc.text('Rooms List', 20, y)
-      y += 10
+      // Vérifier la place avant la prochaine section
+      if (y > pageHeight - 50) {
+        doc.addPage()
+        y = 15
+      }
 
-      const roomData = rooms.slice(0, 15).map((room: any) => [
+      doc.setFontSize(14)
+      doc.setTextColor('#0056B3')
+      doc.text('Rooms List', 15, y)
+      y += 8
+
+      const roomData = rooms.map((room: any) => [
         room.name || 'Unknown',
         room.is_occupied ? 'Occupied' : 'Free',
         `${room.current_people || 0}/${room.max_people || room.capacity || 1}`,
@@ -112,15 +142,20 @@ export default function ReportPDF({ rooms, history, stats }: ReportPDFProps) {
       ])
 
       y = drawTable(['Room', 'Status', 'People', 'Location', 'Confidential'], roomData, y)
-      y += 10
+      y += 8
 
       // ==================== HISTORY ====================
-      doc.setFontSize(16)
-      doc.setTextColor('#0056B3')
-      doc.text('Recent Activity', 20, y)
-      y += 10
+      if (y > pageHeight - 50) {
+        doc.addPage()
+        y = 15
+      }
 
-      const historyData = history.slice(0, 10).map((item: any) => [
+      doc.setFontSize(14)
+      doc.setTextColor('#0056B3')
+      doc.text('Recent Activity', 15, y)
+      y += 8
+
+      const historyData = history.slice(0, 15).map((item: any) => [
         item.rooms?.name || 'Unknown',
         item.is_occupied ? 'Occupied' : 'Free',
         new Date(item.changed_at).toLocaleString(),
@@ -130,14 +165,19 @@ export default function ReportPDF({ rooms, history, stats }: ReportPDFProps) {
       y = drawTable(['Room', 'Status', 'Date', 'User'], historyData, y)
 
       // ==================== FOOTER ====================
+      if (y > pageHeight - 15) {
+        doc.addPage()
+        y = 15
+      }
+
       doc.setDrawColor('#0056B3')
       doc.setLineWidth(0.3)
-      doc.line(20, y + 10, pageWidth - 20, y + 10)
+      doc.line(15, y + 5, pageWidth - 15, y + 5)
 
       doc.setFontSize(8)
       doc.setTextColor('#999')
-      doc.text(`Generated on ${new Date().toLocaleString()}`, pageWidth / 2, y + 18, { align: 'center' })
-      doc.text('© 2026 MDI RoomPulse - ENSA Berrechid', pageWidth / 2, y + 23, { align: 'center' })
+      doc.text(`Generated on ${new Date().toLocaleString()}`, pageWidth / 2, y + 13, { align: 'center' })
+      doc.text('© 2026 MDI RoomPulse - ENSA Berrechid', pageWidth / 2, y + 18, { align: 'center' })
 
       doc.save(`report-${new Date().toISOString().split('T')[0]}.pdf`)
       toast.success('PDF downloaded successfully!')
