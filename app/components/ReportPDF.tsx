@@ -3,7 +3,6 @@
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import jsPDF from 'jspdf'
-import 'jspdf-autotable'
 
 interface ReportPDFProps {
   rooms: any[]
@@ -21,27 +20,70 @@ interface ReportPDFProps {
 export default function ReportPDF({ rooms, history, stats }: ReportPDFProps) {
   const generatePDF = () => {
     try {
-      const doc = new jsPDF('l', 'mm', 'a4') // Paysage
+      const doc = new jsPDF('l', 'mm', 'a4')
       const pageWidth = doc.internal.pageSize.getWidth()
+      let y = 20
+
+      // Helper pour dessiner un tableau simple
+      const drawTable = (headers: string[], data: any[][], startY: number, colors?: any) => {
+        const colWidth = (pageWidth - 40) / headers.length
+        let currentY = startY
+
+        // En-têtes
+        doc.setFillColor('#0056B3')
+        doc.rect(20, currentY, pageWidth - 40, 8, 'F')
+        doc.setTextColor('#FFFFFF')
+        doc.setFontSize(10)
+        doc.setFont('helvetica', 'bold')
+        
+        headers.forEach((header, i) => {
+          const x = 20 + i * colWidth
+          doc.text(header, x + 2, currentY + 5.5)
+        })
+
+        currentY += 8
+        doc.setFont('helvetica', 'normal')
+
+        // Lignes de données
+        data.forEach((row, rowIndex) => {
+          const isEven = rowIndex % 2 === 0
+          doc.setFillColor(isEven ? '#F5F5F5' : '#FFFFFF')
+          doc.rect(20, currentY, pageWidth - 40, 7, 'F')
+
+          row.forEach((cell, cellIndex) => {
+            const x = 20 + cellIndex * colWidth
+            doc.setTextColor('#333')
+            doc.setFontSize(9)
+            doc.text(String(cell), x + 2, currentY + 5)
+          })
+
+          currentY += 7
+        })
+
+        return currentY + 5
+      }
 
       // ==================== HEADER ====================
-      // Logo / Titre
       doc.setFontSize(24)
-      doc.setTextColor('#0056B3') // Bleu MDI
-      doc.text('MDI RoomPulse', pageWidth / 2, 20, { align: 'center' })
+      doc.setTextColor('#0056B3')
+      doc.text('MDI RoomPulse', pageWidth / 2, y, { align: 'center' })
+      y += 10
 
       doc.setFontSize(14)
       doc.setTextColor('#666')
-      doc.text('Room Usage Report', pageWidth / 2, 30, { align: 'center' })
+      doc.text('Room Usage Report', pageWidth / 2, y, { align: 'center' })
+      y += 15
 
       doc.setDrawColor('#0056B3')
       doc.setLineWidth(0.5)
-      doc.line(20, 35, pageWidth - 20, 35)
+      doc.line(20, y, pageWidth - 20, y)
+      y += 10
 
       // ==================== STATS ====================
       doc.setFontSize(16)
       doc.setTextColor('#0056B3')
-      doc.text('📊 General Statistics', 20, 48)
+      doc.text('General Statistics', 20, y)
+      y += 10
 
       const statsData = [
         ['Total Rooms', stats.totalRooms],
@@ -52,34 +94,16 @@ export default function ReportPDF({ rooms, history, stats }: ReportPDFProps) {
         ['Total History', stats.totalHistory],
       ]
 
-      doc.autoTable({
-        startY: 55,
-        head: [['Statistic', 'Value']],
-        body: statsData,
-        theme: 'striped',
-        headStyles: { 
-          fillColor: '#0056B3', 
-          textColor: '#FFFFFF',
-          fontSize: 12,
-          halign: 'center',
-        },
-        styles: { 
-          fontSize: 11,
-          cellPadding: 6,
-        },
-        columnStyles: {
-          0: { cellWidth: 'auto' },
-          1: { cellWidth: 'auto', halign: 'center', fontStyle: 'bold' },
-        },
-      })
+      y = drawTable(['Statistic', 'Value'], statsData, y)
+      y += 10
 
-      // ==================== ROOMS TABLE ====================
-      const finalY = (doc as any).lastAutoTable?.finalY || 100
+      // ==================== ROOMS ====================
       doc.setFontSize(16)
       doc.setTextColor('#0056B3')
-      doc.text('🏢 Rooms List', 20, finalY + 15)
+      doc.text('Rooms List', 20, y)
+      y += 10
 
-      const roomData = rooms.map((room: any) => [
+      const roomData = rooms.slice(0, 15).map((room: any) => [
         room.name || 'Unknown',
         room.is_occupied ? 'Occupied' : 'Free',
         `${room.current_people || 0}/${room.max_people || room.capacity || 1}`,
@@ -87,97 +111,34 @@ export default function ReportPDF({ rooms, history, stats }: ReportPDFProps) {
         room.is_confidential ? 'Yes' : 'No',
       ])
 
-      doc.autoTable({
-        startY: finalY + 22,
-        head: [['Room', 'Status', 'People', 'Location', 'Confidential']],
-        body: roomData,
-        theme: 'striped',
-        headStyles: { 
-          fillColor: '#0056B3', 
-          textColor: '#FFFFFF',
-          fontSize: 11,
-          halign: 'center',
-        },
-        styles: { 
-          fontSize: 10,
-          cellPadding: 4,
-        },
-        columnStyles: {
-          0: { cellWidth: 'auto' },
-          1: { cellWidth: 30, halign: 'center' },
-          2: { cellWidth: 30, halign: 'center' },
-          3: { cellWidth: 'auto' },
-          4: { cellWidth: 25, halign: 'center' },
-        },
-        didDrawCell: (data: any) => {
-          // Couleurs pour le statut
-          if (data.column.index === 1 && data.cell.raw === 'Occupied') {
-            data.cell.styles.fillColor = '#EF4444'
-            data.cell.styles.textColor = '#FFFFFF'
-          } else if (data.column.index === 1 && data.cell.raw === 'Free') {
-            data.cell.styles.fillColor = '#10B981'
-            data.cell.styles.textColor = '#FFFFFF'
-          }
-        },
-      })
+      y = drawTable(['Room', 'Status', 'People', 'Location', 'Confidential'], roomData, y)
+      y += 10
 
-      // ==================== HISTORY TABLE ====================
-      const finalY2 = (doc as any).lastAutoTable?.finalY || 200
+      // ==================== HISTORY ====================
       doc.setFontSize(16)
       doc.setTextColor('#0056B3')
-      doc.text('📋 Recent Activity', 20, finalY2 + 15)
+      doc.text('Recent Activity', 20, y)
+      y += 10
 
-      const historyData = history.slice(0, 15).map((item: any) => [
+      const historyData = history.slice(0, 10).map((item: any) => [
         item.rooms?.name || 'Unknown',
         item.is_occupied ? 'Occupied' : 'Free',
         new Date(item.changed_at).toLocaleString(),
         item.profiles?.email || 'System',
       ])
 
-      doc.autoTable({
-        startY: finalY2 + 22,
-        head: [['Room', 'Status', 'Date', 'User']],
-        body: historyData,
-        theme: 'striped',
-        headStyles: { 
-          fillColor: '#0056B3', 
-          textColor: '#FFFFFF',
-          fontSize: 11,
-          halign: 'center',
-        },
-        styles: { 
-          fontSize: 9,
-          cellPadding: 4,
-        },
-        columnStyles: {
-          0: { cellWidth: 'auto' },
-          1: { cellWidth: 25, halign: 'center' },
-          2: { cellWidth: 'auto' },
-          3: { cellWidth: 'auto' },
-        },
-        didDrawCell: (data: any) => {
-          if (data.column.index === 1 && data.cell.raw === 'Occupied') {
-            data.cell.styles.fillColor = '#EF4444'
-            data.cell.styles.textColor = '#FFFFFF'
-          } else if (data.column.index === 1 && data.cell.raw === 'Free') {
-            data.cell.styles.fillColor = '#10B981'
-            data.cell.styles.textColor = '#FFFFFF'
-          }
-        },
-      })
+      y = drawTable(['Room', 'Status', 'Date', 'User'], historyData, y)
 
       // ==================== FOOTER ====================
-      const finalY3 = (doc as any).lastAutoTable?.finalY || 270
       doc.setDrawColor('#0056B3')
       doc.setLineWidth(0.3)
-      doc.line(20, finalY3 + 10, pageWidth - 20, finalY3 + 10)
+      doc.line(20, y + 10, pageWidth - 20, y + 10)
 
       doc.setFontSize(8)
       doc.setTextColor('#999')
-      doc.text(`Generated on ${new Date().toLocaleString()}`, pageWidth / 2, finalY3 + 18, { align: 'center' })
-      doc.text('© 2026 MDI RoomPulse - ENSA Berrechid', pageWidth / 2, finalY3 + 23, { align: 'center' })
+      doc.text(`Generated on ${new Date().toLocaleString()}`, pageWidth / 2, y + 18, { align: 'center' })
+      doc.text('© 2026 MDI RoomPulse - ENSA Berrechid', pageWidth / 2, y + 23, { align: 'center' })
 
-      // ==================== SAUVEGARDE ====================
       doc.save(`report-${new Date().toISOString().split('T')[0]}.pdf`)
       toast.success('PDF downloaded successfully!')
 
