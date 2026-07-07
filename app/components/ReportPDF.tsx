@@ -3,6 +3,7 @@
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import jsPDF from 'jspdf'
+import 'jspdf-autotable'
 
 interface ReportPDFProps {
   rooms: any[]
@@ -20,69 +21,166 @@ interface ReportPDFProps {
 export default function ReportPDF({ rooms, history, stats }: ReportPDFProps) {
   const generatePDF = () => {
     try {
-      const doc = new jsPDF()
+      const doc = new jsPDF('l', 'mm', 'a4') // Paysage
       const pageWidth = doc.internal.pageSize.getWidth()
-      let y = 20
 
-      // Title
-      doc.setFontSize(20)
-      doc.setTextColor('#0056B3')
-      doc.text('MDI RoomPulse', pageWidth / 2, y, { align: 'center' })
-      y += 10
+      // ==================== HEADER ====================
+      // Logo / Titre
+      doc.setFontSize(24)
+      doc.setTextColor('#0056B3') // Bleu MDI
+      doc.text('MDI RoomPulse', pageWidth / 2, 20, { align: 'center' })
 
-      doc.setFontSize(12)
+      doc.setFontSize(14)
       doc.setTextColor('#666')
-      doc.text('Room Usage Report', pageWidth / 2, y, { align: 'center' })
-      y += 15
+      doc.text('Room Usage Report', pageWidth / 2, 30, { align: 'center' })
 
-      // Stats
-      doc.setFontSize(14)
+      doc.setDrawColor('#0056B3')
+      doc.setLineWidth(0.5)
+      doc.line(20, 35, pageWidth - 20, 35)
+
+      // ==================== STATS ====================
+      doc.setFontSize(16)
       doc.setTextColor('#0056B3')
-      doc.text('General Statistics', 20, y)
-      y += 10
+      doc.text('📊 General Statistics', 20, 48)
 
-      doc.setFontSize(10)
-      doc.setTextColor('#333')
-      doc.text(`Total Rooms: ${stats.totalRooms}`, 20, y)
-      y += 7
-      doc.text(`Free Rooms: ${stats.freeRooms}`, 20, y)
-      y += 7
-      doc.text(`Occupied Rooms: ${stats.occupiedRooms}`, 20, y)
-      y += 7
-      doc.text(`Total Users: ${stats.totalUsers}`, 20, y)
-      y += 7
-      doc.text(`Total History: ${stats.totalHistory}`, 20, y)
-      y += 15
+      const statsData = [
+        ['Total Rooms', stats.totalRooms],
+        ['Free Rooms', stats.freeRooms],
+        ['Occupied Rooms', stats.occupiedRooms],
+        ['Total Users', stats.totalUsers],
+        ['Total Subscriptions', stats.totalSubscriptions],
+        ['Total History', stats.totalHistory],
+      ]
 
-      // Rooms List
-      doc.setFontSize(14)
-      doc.setTextColor('#0056B3')
-      doc.text('Room List', 20, y)
-      y += 10
-
-      doc.setFontSize(9)
-      doc.setTextColor('#333')
-      rooms.slice(0, 20).forEach((room: any, index: number) => {
-        if (y > 270) {
-          doc.addPage()
-          y = 20
-        }
-        const status = room.is_occupied ? 'Occupied' : 'Free'
-        const people = `${room.current_people || 0}/${room.max_people || room.capacity || 1}`
-        const name = room.name || 'Unknown'
-        doc.text(`${index + 1}. ${name} - ${status} - ${people} people`, 20, y)
-        y += 7
+      doc.autoTable({
+        startY: 55,
+        head: [['Statistic', 'Value']],
+        body: statsData,
+        theme: 'striped',
+        headStyles: { 
+          fillColor: '#0056B3', 
+          textColor: '#FFFFFF',
+          fontSize: 12,
+          halign: 'center',
+        },
+        styles: { 
+          fontSize: 11,
+          cellPadding: 6,
+        },
+        columnStyles: {
+          0: { cellWidth: 'auto' },
+          1: { cellWidth: 'auto', halign: 'center', fontStyle: 'bold' },
+        },
       })
 
-      // Footer
+      // ==================== ROOMS TABLE ====================
+      const finalY = (doc as any).lastAutoTable?.finalY || 100
+      doc.setFontSize(16)
+      doc.setTextColor('#0056B3')
+      doc.text('🏢 Rooms List', 20, finalY + 15)
+
+      const roomData = rooms.map((room: any) => [
+        room.name || 'Unknown',
+        room.is_occupied ? 'Occupied' : 'Free',
+        `${room.current_people || 0}/${room.max_people || room.capacity || 1}`,
+        room.location || 'N/A',
+        room.is_confidential ? 'Yes' : 'No',
+      ])
+
+      doc.autoTable({
+        startY: finalY + 22,
+        head: [['Room', 'Status', 'People', 'Location', 'Confidential']],
+        body: roomData,
+        theme: 'striped',
+        headStyles: { 
+          fillColor: '#0056B3', 
+          textColor: '#FFFFFF',
+          fontSize: 11,
+          halign: 'center',
+        },
+        styles: { 
+          fontSize: 10,
+          cellPadding: 4,
+        },
+        columnStyles: {
+          0: { cellWidth: 'auto' },
+          1: { cellWidth: 30, halign: 'center' },
+          2: { cellWidth: 30, halign: 'center' },
+          3: { cellWidth: 'auto' },
+          4: { cellWidth: 25, halign: 'center' },
+        },
+        didDrawCell: (data: any) => {
+          // Couleurs pour le statut
+          if (data.column.index === 1 && data.cell.raw === 'Occupied') {
+            data.cell.styles.fillColor = '#EF4444'
+            data.cell.styles.textColor = '#FFFFFF'
+          } else if (data.column.index === 1 && data.cell.raw === 'Free') {
+            data.cell.styles.fillColor = '#10B981'
+            data.cell.styles.textColor = '#FFFFFF'
+          }
+        },
+      })
+
+      // ==================== HISTORY TABLE ====================
+      const finalY2 = (doc as any).lastAutoTable?.finalY || 200
+      doc.setFontSize(16)
+      doc.setTextColor('#0056B3')
+      doc.text('📋 Recent Activity', 20, finalY2 + 15)
+
+      const historyData = history.slice(0, 15).map((item: any) => [
+        item.rooms?.name || 'Unknown',
+        item.is_occupied ? 'Occupied' : 'Free',
+        new Date(item.changed_at).toLocaleString(),
+        item.profiles?.email || 'System',
+      ])
+
+      doc.autoTable({
+        startY: finalY2 + 22,
+        head: [['Room', 'Status', 'Date', 'User']],
+        body: historyData,
+        theme: 'striped',
+        headStyles: { 
+          fillColor: '#0056B3', 
+          textColor: '#FFFFFF',
+          fontSize: 11,
+          halign: 'center',
+        },
+        styles: { 
+          fontSize: 9,
+          cellPadding: 4,
+        },
+        columnStyles: {
+          0: { cellWidth: 'auto' },
+          1: { cellWidth: 25, halign: 'center' },
+          2: { cellWidth: 'auto' },
+          3: { cellWidth: 'auto' },
+        },
+        didDrawCell: (data: any) => {
+          if (data.column.index === 1 && data.cell.raw === 'Occupied') {
+            data.cell.styles.fillColor = '#EF4444'
+            data.cell.styles.textColor = '#FFFFFF'
+          } else if (data.column.index === 1 && data.cell.raw === 'Free') {
+            data.cell.styles.fillColor = '#10B981'
+            data.cell.styles.textColor = '#FFFFFF'
+          }
+        },
+      })
+
+      // ==================== FOOTER ====================
+      const finalY3 = (doc as any).lastAutoTable?.finalY || 270
+      doc.setDrawColor('#0056B3')
+      doc.setLineWidth(0.3)
+      doc.line(20, finalY3 + 10, pageWidth - 20, finalY3 + 10)
+
       doc.setFontSize(8)
       doc.setTextColor('#999')
-      doc.text(`Generated on ${new Date().toLocaleString()}`, pageWidth / 2, 280, { align: 'center' })
-      doc.text('© 2026 MDI RoomPulse - ENSA Berrechid', pageWidth / 2, 285, { align: 'center' })
+      doc.text(`Generated on ${new Date().toLocaleString()}`, pageWidth / 2, finalY3 + 18, { align: 'center' })
+      doc.text('© 2026 MDI RoomPulse - ENSA Berrechid', pageWidth / 2, finalY3 + 23, { align: 'center' })
 
-      // Sauvegarder le PDF
+      // ==================== SAUVEGARDE ====================
       doc.save(`report-${new Date().toISOString().split('T')[0]}.pdf`)
       toast.success('PDF downloaded successfully!')
+
     } catch (error) {
       console.error('PDF Error:', error)
       toast.error('Error generating PDF')
