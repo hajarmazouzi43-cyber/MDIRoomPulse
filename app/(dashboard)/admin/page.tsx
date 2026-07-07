@@ -19,6 +19,12 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingRoom, setEditingRoom] = useState<any>(null)
+  
+  // ✅ Admin Code
+  const [showCodeDialog, setShowCodeDialog] = useState(true)
+  const [adminCode, setAdminCode] = useState('')
+  const [isAdmin, setIsAdmin] = useState(false)
+  
   const supabase = createClient()
 
   const [formData, setFormData] = useState({
@@ -32,9 +38,25 @@ export default function AdminPage() {
     is_confidential: 'false'
   })
 
+  // ✅ Vérifier le code admin
+  const verifyAdminCode = () => {
+    if (adminCode === 'ADMINatrsd2647') {
+      setIsAdmin(true)
+      setShowCodeDialog(false)
+      setAdminCode('')
+      toast.success('Access granted')
+      fetchData()
+    } else {
+      toast.error('Invalid admin code')
+      setAdminCode('')
+    }
+  }
+
   useEffect(() => {
-    fetchData()
-  }, [])
+    if (isAdmin) {
+      fetchData()
+    }
+  }, [isAdmin])
 
   const fetchData = async () => {
     setLoading(true)
@@ -133,6 +155,46 @@ export default function AdminPage() {
     totalHistory: history.length
   }
 
+  // ✅ Si pas admin, afficher le Dialog de code
+  if (!isAdmin) {
+    return (
+      <div className="container mx-auto py-8 px-4 max-w-md">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl text-[#0056B3]">🔐 Admin Access Required</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-gray-500">
+              Enter the admin code to access the dashboard.
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="admin-code">Admin Code</Label>
+              <Input
+                id="admin-code"
+                type="password"
+                placeholder="Enter admin code..."
+                value={adminCode}
+                onChange={(e) => setAdminCode(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    verifyAdminCode()
+                  }
+                }}
+                autoFocus
+              />
+              <p className="text-xs text-gray-400">
+                Contact your administrator for the code.
+              </p>
+            </div>
+            <Button onClick={verifyAdminCode} className="w-full bg-[#0056B3] hover:bg-[#00449E]">
+              Verify
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   if (loading) {
     return (
       <div className="container mx-auto py-8 px-4">
@@ -152,18 +214,18 @@ export default function AdminPage() {
       <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
         <h1 className="text-3xl font-bold text-[#0056B3]">Admin Dashboard</h1>
         <div className="flex gap-2">
-<ReportPDF 
-  rooms={rooms} 
-  history={history} 
-  stats={{
-    totalRooms: rooms.length,
-    occupiedRooms: rooms.filter(r => r.is_occupied).length,
-    freeRooms: rooms.filter(r => !r.is_occupied).length,
-    totalUsers: users.length,
-    totalSubscriptions: rooms.reduce((acc, r) => acc + (r.subscribers_count || 0), 0),
-    totalHistory: history.length
-  }}
-/>
+          <ReportPDF 
+            rooms={rooms} 
+            history={history} 
+            stats={{
+              totalRooms: rooms.length,
+              occupiedRooms: rooms.filter(r => r.is_occupied).length,
+              freeRooms: rooms.filter(r => !r.is_occupied).length,
+              totalUsers: users.length,
+              totalSubscriptions: rooms.reduce((acc, r) => acc + (r.subscribers_count || 0), 0),
+              totalHistory: history.length
+            }}
+          />
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button className="bg-[#0056B3] hover:bg-[#00449E]">
