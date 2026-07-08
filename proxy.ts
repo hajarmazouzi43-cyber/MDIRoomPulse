@@ -43,7 +43,9 @@ export async function proxy(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/admin') ||
     request.nextUrl.pathname.startsWith('/rooms') ||
     request.nextUrl.pathname.startsWith('/analytics') ||
-    request.nextUrl.pathname.startsWith('/history')
+    request.nextUrl.pathname.startsWith('/history') ||
+  request.nextUrl.pathname.startsWith('/ai-assistant') ||
+    request.nextUrl.pathname.startsWith('/calendar')
 
   // Routes d'authentification
   const isAuthRoute = request.nextUrl.pathname === '/login'

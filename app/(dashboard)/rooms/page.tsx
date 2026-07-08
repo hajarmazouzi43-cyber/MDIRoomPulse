@@ -199,10 +199,10 @@ export default function RoomsPage() {
     return (
       <div className="container mx-auto py-8 px-4">
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-48 mb-6"></div>
+          <div className="h-8 bg-gray-200 dark:bg-[#1e293b] rounded w-48 mb-6"></div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="h-48 bg-gray-200 rounded"></div>
+              <div key={i} className="h-48 bg-gray-200 dark:bg-[#1e293b] rounded"></div>
             ))}
           </div>
         </div>
@@ -215,7 +215,7 @@ export default function RoomsPage() {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <h1 className="text-3xl font-bold text-[#0056B3]">
+        <h1 className="text-3xl font-bold text-[#0056B3] dark:text-[#00A3E0]">
           Rooms & Spaces
         </h1>
         
@@ -228,12 +228,12 @@ export default function RoomsPage() {
       </div>
 
       {allOccupied && (
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded">
+        <div className="bg-yellow-50 dark:bg-yellow-900/30 border-l-4 border-yellow-400 p-4 mb-6 rounded">
           <div className="flex items-center">
             <span className="text-2xl mr-3"></span>
             <div>
-              <p className="font-semibold text-yellow-800">All rooms are occupied</p>
-              <p className="text-yellow-700">
+              <p className="font-semibold text-yellow-800 dark:text-yellow-400">All rooms are occupied</p>
+              <p className="text-yellow-700 dark:text-yellow-300">
                 Please take a seat in the lounge area with comfortable sofas.
               </p>
             </div>
@@ -242,8 +242,8 @@ export default function RoomsPage() {
       )}
 
       {!allOccupied && hasFreeRooms && (
-        <div className="bg-green-50 border-l-4 border-green-400 p-4 mb-6 rounded">
-          <p className="text-green-700">
+        <div className="bg-green-50 dark:bg-green-900/30 border-l-4 border-green-400 p-4 mb-6 rounded">
+          <p className="text-green-700 dark:text-green-400">
             Some spaces are available. Check the list below.
           </p>
         </div>
@@ -255,7 +255,17 @@ export default function RoomsPage() {
           const isDetente = room.category === 'detente'
           
           return (
-            <Card key={room.id} className={`hover:shadow-lg transition-shadow ${room.is_occupied ? 'border-red-300 bg-red-50' : 'border-green-300 bg-green-50'} relative`}>
+            <Card 
+              key={room.id} 
+              className={`
+                hover:shadow-lg transition-shadow 
+                ${room.is_occupied 
+                  ? 'border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/20' 
+                  : 'border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-900/20'
+                } 
+                relative
+              `}
+            >
               {room.is_confidential && (
                 <div className="absolute top-0 right-0 bg-red-500 text-white text-xs px-2 py-1 rounded-bl-lg rounded-tr-lg">
                   🔒 Confidential
@@ -263,7 +273,7 @@ export default function RoomsPage() {
               )}
               <CardHeader className="pb-2">
                 <CardTitle className="flex justify-between items-center">
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center gap-2 dark:text-white">
                     <span>{icon}</span>
                     <span>{room.name}</span>
                   </span>
@@ -273,27 +283,27 @@ export default function RoomsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <p>Capacity: {room.capacity} person{room.capacity > 1 ? 's' : ''}</p>
+                <p className="dark:text-gray-300">Capacity: {room.capacity} person{room.capacity > 1 ? 's' : ''}</p>
                 
                 {room.max_people > 0 && (
-                  <p className="text-sm">
+                  <p className="text-sm dark:text-gray-300">
                     People: <span className="font-semibold">{room.current_people || 0}</span> / {room.max_people}
                   </p>
                 )}
                 
-                {room.location && <p>Location: {room.location}</p>}
+                {room.location && <p className="dark:text-gray-300">Location: {room.location}</p>}
                 
                 {room.equipment && room.equipment.length > 0 && (
                   <div>
-                    <p className="text-sm text-gray-500">Equipment:</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Equipment:</p>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {room.equipment.slice(0, 3).map((item: string) => (
-                        <span key={item} className="text-xs bg-gray-100 px-2 py-1 rounded-full">
+                        <span key={item} className="text-xs bg-gray-100 dark:bg-[#1e293b] px-2 py-1 rounded-full dark:text-gray-300">
                           {item}
                         </span>
                       ))}
                       {room.equipment.length > 3 && (
-                        <span className="text-xs text-gray-400">+{room.equipment.length - 3}</span>
+                        <span className="text-xs text-gray-400 dark:text-gray-500">+{room.equipment.length - 3}</span>
                       )}
                     </div>
                   </div>
@@ -309,19 +319,19 @@ export default function RoomsPage() {
                             min={1}
                             max={(room.max_people || 1) - (room.current_people || 0)}
                             defaultValue={1}
-                            className="w-16 h-10 text-center border rounded-lg"
+                            className="w-16 h-10 text-center border rounded-lg bg-white dark:bg-[#1e293b] dark:border-[#334155] dark:text-white"
                             id={`people-${room.id}`}
                           />
                           <input
                             type="time"
                             defaultValue="13:00"
-                            className="w-24 h-10 text-center border rounded-lg"
+                            className="w-24 h-10 text-center border rounded-lg bg-white dark:bg-[#1e293b] dark:border-[#334155] dark:text-white"
                             id={`start-time-${room.id}`}
                           />
                           <input
                             type="time"
                             defaultValue="16:00"
-                            className="w-24 h-10 text-center border rounded-lg"
+                            className="w-24 h-10 text-center border rounded-lg bg-white dark:bg-[#1e293b] dark:border-[#334155] dark:text-white"
                             id={`end-time-${room.id}`}
                           />
                           <Button
@@ -334,21 +344,21 @@ export default function RoomsPage() {
                               const endTime = endInput?.value || '16:00'
                               occupyRoomWithTime(room.id, room.name, count, startTime, endTime)
                             }}
-                            className="flex-1 bg-green-600 hover:bg-green-700"
+                            className="flex-1 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800"
                           >
                             Occupy
                           </Button>
                         </div>
-                        <span className="text-xs text-gray-400">People | Start | End</span>
+                        <span className="text-xs text-gray-400 dark:text-gray-500">People | Start | End</span>
                       </div>
                     ) : (
                       <div className="flex flex-col gap-2 w-full">
-                        <div className="flex items-center justify-between bg-gray-100 rounded-lg px-3 py-2">
-                          <span className="text-sm font-medium">
+                        <div className="flex items-center justify-between bg-gray-100 dark:bg-[#1e293b] rounded-lg px-3 py-2">
+                          <span className="text-sm font-medium dark:text-white">
                             {room.current_people || 0}/{room.max_people || room.capacity || 1} people
                           </span>
                           {room.occupied_at && room.occupied_until && (
-                            <span className="text-sm text-gray-500">
+                            <span className="text-sm text-gray-500 dark:text-gray-400">
                               ⏱️ {new Date(room.occupied_at).toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})} 
                               → {new Date(room.occupied_until).toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})}
                             </span>
@@ -356,7 +366,7 @@ export default function RoomsPage() {
                         </div>
                         <Button
                           onClick={() => freeRoom(room.id, room.name)}
-                          className="w-full bg-red-600 hover:bg-red-700"
+                          className="w-full bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
                         >
                           Free & Notify
                         </Button>
@@ -366,13 +376,13 @@ export default function RoomsPage() {
                 )}
 
                 {isDetente && (
-                  <div className="text-sm text-gray-500 italic">
+                  <div className="text-sm text-gray-500 dark:text-gray-400 italic">
                     Lounge area - Always available
                   </div>
                 )}
 
                 <Link href={`/rooms/${room.id}`}>
-                  <p className="text-sm text-blue-600 hover:underline mt-2">
+                  <p className="text-sm text-blue-600 dark:text-blue-400 hover:underline mt-2">
                     View details
                   </p>
                 </Link>
@@ -382,8 +392,8 @@ export default function RoomsPage() {
         })}
       </div>
 
-      <div className="mt-8 p-4 bg-gray-50 rounded-lg border">
-        <p className="text-sm text-gray-600">
+      <div className="mt-8 p-4 bg-gray-50 dark:bg-[#1e293b] rounded-lg border dark:border-[#334155]">
+        <p className="text-sm text-gray-600 dark:text-gray-300">
           Total: <span className="font-bold">{rooms.length}</span> spaces
           <span className="ml-4">Available: <span className="font-bold">{rooms.filter(r => !r.is_occupied && r.category !== 'detente').length}</span></span>
           <span className="ml-4">Occupied: <span className="font-bold">{rooms.filter(r => r.is_occupied).length}</span></span>

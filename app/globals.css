@@ -128,3 +128,184 @@
     @apply font-sans;
   }
 }
+/* ============================================
+   DARK MODE
+   ============================================ */
+
+.dark {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --border-color: #334155;
+}
+
+/* Fond général */
+.dark body {
+  background-color: #0f172a;
+  color: #f1f5f9;
+}
+
+/* Cartes */
+.dark .bg-white {
+  background-color: #1e293b !important;
+}
+
+.dark .bg-gray-50 {
+  background-color: #0f172a !important;
+}
+
+.dark .bg-gray-100 {
+  background-color: #1e293b !important;
+}
+
+.dark .bg-gray-200 {
+  background-color: #334155 !important;
+}
+
+/* Texte */
+.dark .text-gray-500 {
+  color: #94a3b8 !important;
+}
+
+.dark .text-gray-600 {
+  color: #94a3b8 !important;
+}
+
+.dark .text-gray-700 {
+  color: #cbd5e1 !important;
+}
+
+.dark .text-gray-800 {
+  color: #e2e8f0 !important;
+}
+
+.dark .text-gray-900 {
+  color: #f1f5f9 !important;
+}
+
+/* Bordures */
+.dark .border {
+  border-color: #334155 !important;
+}
+
+.dark .border-b {
+  border-bottom-color: #334155 !important;
+}
+
+.dark .border-t {
+  border-top-color: #334155 !important;
+}
+
+.dark .border-l-4 {
+  border-left-color: #334155 !important;
+}
+
+/* Ombres */
+.dark .shadow-sm {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5) !important;
+}
+
+.dark .shadow-md {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5) !important;
+}
+
+.dark .shadow-lg {
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Inputs */
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+.dark input::placeholder {
+  color: #64748b !important;
+}
+
+/* Boutons hover */
+.dark .hover\:bg-gray-50:hover {
+  background-color: #334155 !important;
+}
+
+.dark .hover\:bg-gray-100:hover {
+  background-color: #334155 !important;
+}
+
+/* Badges */
+.dark .bg-green-500 {
+  background-color: #10b981 !important;
+}
+
+.dark .bg-red-500 {
+  background-color: #ef4444 !important;
+}
+
+.dark .bg-yellow-500 {
+  background-color: #f59e0b !important;
+}
+
+.dark .bg-purple-500 {
+  background-color: #8b5cf6 !important;
+}
+
+/* Tables */
+.dark table {
+  color: #f1f5f9;
+}
+
+.dark thead {
+  background-color: #1e293b !important;
+}
+
+.dark tbody tr {
+  border-bottom-color: #334155 !important;
+}
+
+.dark tbody tr:hover {
+  background-color: #334155 !important;
+}
+
+/* Dialog / Modal */
+.dark .dialog-content {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+/* Header */
+.dark header {
+  background-color: #0f172a !important;
+  border-bottom-color: #334155 !important;
+}
+
+/* Footer */
+.dark footer {
+  background-color: #0f172a !important;
+  border-top-color: #334155 !important;
+}
+
+/* Cards en vert/rouge (salles) */
+.dark .bg-green-50 {
+  background-color: #064e3b !important;
+}
+
+.dark .bg-red-50 {
+  background-color: #7f1d1d !important;
+}
+
+.dark .border-green-300 {
+  border-color: #065f46 !important;
+}
+
+.dark .border-red-300 {
+  border-color: #991b1b !important;
+}
+
+/* QR Code */
+.dark .qr-code {
+  background-color: #1e293b !important;
+}
