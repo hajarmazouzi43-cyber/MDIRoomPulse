@@ -310,28 +310,28 @@ export default function RoomsPage() {
                 )}
 
                 {!isDetente && user && (
-                  <div className="flex gap-2 mt-2">
+                  <div className="flex flex-col gap-2 mt-2">
                     {!room.is_occupied ? (
                       <div className="flex flex-col gap-2 w-full">
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap items-center gap-2 w-full">
                           <input
                             type="number"
                             min={1}
                             max={(room.max_people || 1) - (room.current_people || 0)}
                             defaultValue={1}
-                            className="w-16 h-10 text-center border rounded-lg bg-white dark:bg-[#1e293b] dark:border-[#334155] dark:text-white"
+                            className="w-12 sm:w-14 h-10 text-center border rounded-lg bg-white dark:bg-[#1e293b] dark:border-[#334155] dark:text-white flex-shrink-0"
                             id={`people-${room.id}`}
                           />
                           <input
                             type="time"
                             defaultValue="13:00"
-                            className="w-24 h-10 text-center border rounded-lg bg-white dark:bg-[#1e293b] dark:border-[#334155] dark:text-white"
+                            className="w-20 sm:w-24 h-10 text-center border rounded-lg bg-white dark:bg-[#1e293b] dark:border-[#334155] dark:text-white flex-shrink-0"
                             id={`start-time-${room.id}`}
                           />
                           <input
                             type="time"
                             defaultValue="16:00"
-                            className="w-24 h-10 text-center border rounded-lg bg-white dark:bg-[#1e293b] dark:border-[#334155] dark:text-white"
+                            className="w-20 sm:w-24 h-10 text-center border rounded-lg bg-white dark:bg-[#1e293b] dark:border-[#334155] dark:text-white flex-shrink-0"
                             id={`end-time-${room.id}`}
                           />
                           <Button
@@ -344,7 +344,7 @@ export default function RoomsPage() {
                               const endTime = endInput?.value || '16:00'
                               occupyRoomWithTime(room.id, room.name, count, startTime, endTime)
                             }}
-                            className="flex-1 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800"
+                            className="flex-1 min-w-[70px] bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800 h-10"
                           >
                             Occupy
                           </Button>
@@ -353,7 +353,7 @@ export default function RoomsPage() {
                       </div>
                     ) : (
                       <div className="flex flex-col gap-2 w-full">
-                        <div className="flex items-center justify-between bg-gray-100 dark:bg-[#1e293b] rounded-lg px-3 py-2">
+                        <div className="flex flex-wrap items-center justify-between bg-gray-100 dark:bg-[#1e293b] rounded-lg px-3 py-2 gap-2">
                           <span className="text-sm font-medium dark:text-white">
                             {room.current_people || 0}/{room.max_people || room.capacity || 1} people
                           </span>
