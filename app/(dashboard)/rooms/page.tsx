@@ -400,4 +400,41 @@ export default function RoomsPage() {
                         <Button
                           onClick={() => freeRoom(room.id, room.name)}
                           className="w-full bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
-                       
+                        >
+                          Free & Notify
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {isDetente && (
+                  <div className="text-sm text-gray-500 dark:text-gray-400 italic">
+                    Lounge area - Always available
+                  </div>
+                )}
+
+                <Link href={`/rooms/${room.id}`}>
+                  <p className="text-sm text-blue-600 dark:text-blue-400 hover:underline mt-2">
+                    View details
+                  </p>
+                </Link>
+              </CardContent>
+            </Card>
+          )
+        })}
+      </div>
+
+      <div className="mt-8 p-4 bg-gray-50 dark:bg-[#1e293b] rounded-lg border dark:border-[#334155]">
+        <p className="text-sm text-gray-600 dark:text-gray-300">
+          Total: <span className="font-bold">{rooms.length}</span> spaces
+          <span className="ml-4">Available: <span className="font-bold">{rooms.filter(r => !r.is_occupied && r.category !== 'detente' && !r.is_out_of_service).length}</span></span>
+          <span className="ml-4">Occupied: <span className="font-bold">{rooms.filter(r => r.is_occupied).length}</span></span>
+          <span className="ml-4">Lounge: <span className="font-bold">{rooms.filter(r => r.category === 'detente').length}</span></span>
+          <span className="ml-4">🔒: <span className="font-bold">{rooms.filter(r => r.is_confidential).length}</span></span>
+          <span className="ml-4">🚫: <span className="font-bold">{rooms.filter(r => r.is_out_of_service).length}</span></span>
+        </p>
+      </div>
+    </div>
+  )
+}
