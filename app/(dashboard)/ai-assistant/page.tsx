@@ -23,6 +23,8 @@ interface RoomData {
   category: string
   is_occupied: boolean
   is_confidential: boolean
+    is_out_of_service: boolean        // ← Ajoute
+  out_of_service_reason: string | null  // ← Ajoute
   current_people: number
   max_people: number
   occupied_until: string | null
