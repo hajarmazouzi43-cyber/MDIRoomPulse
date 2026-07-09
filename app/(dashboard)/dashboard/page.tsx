@@ -218,8 +218,7 @@ export default function DashboardPage() {
       b.room_id === formData.room_id &&
       b.booking_date === formData.booking_date &&
       b.start_time < formData.end_time &&
-      b.end_time > formData.start_time &&
-      b.id !== formData.id // Pour les modifications
+      b.end_time > formData.start_time
     )
 
     if (hasConflict) {
