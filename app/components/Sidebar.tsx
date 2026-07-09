@@ -17,16 +17,17 @@ import {
   LogOut,
   Moon,
   Sun,
-  Bell
+  
 } from 'lucide-react'
 
 interface SidebarProps {
   darkMode: boolean
   toggleDarkMode: () => void
   handleSignOut: () => void
+  isAdmin: boolean
 }
 
-export default function Sidebar({ darkMode, toggleDarkMode, handleSignOut }: SidebarProps) {
+export default function Sidebar({ darkMode, toggleDarkMode, handleSignOut, isAdmin }: SidebarProps) {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
 
@@ -38,7 +39,11 @@ export default function Sidebar({ darkMode, toggleDarkMode, handleSignOut }: Sid
     { name: 'Calendar', icon: Calendar, href: '/calendar' },
     { name: 'AI Assistant', icon: Bot, href: '/ai-assistant' },
     { name: 'Analytics', icon: BarChart3, href: '/analytics' },
-    { name: 'Admin', icon: Shield, href: '/admin' },
+    
+        // ✅ Admin seulement
+    ...(isAdmin ? [
+      { name: 'Admin', icon: Shield, href: '/admin' },
+    ] : []),
     { name: 'Profile', icon: User, href: '/profile' },
   ]
 

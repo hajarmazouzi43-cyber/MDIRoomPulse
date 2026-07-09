@@ -16,6 +16,7 @@ export default function DashboardLayout({
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [darkMode, setDarkMode] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -36,6 +37,17 @@ export default function DashboardLayout({
     async function getUser() {
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
+      
+      // Vérifier si l'utilisateur est admin
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+        setIsAdmin(profile?.role === 'admin')
+      }
+      
       setLoading(false)
     }
     getUser()
@@ -45,6 +57,13 @@ export default function DashboardLayout({
         router.push('/login')
       } else {
         setUser(session.user)
+        // Re-vérifier le rôle
+        supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data }) => setIsAdmin(data?.role === 'admin'))
       }
     })
 
@@ -61,13 +80,25 @@ export default function DashboardLayout({
     }
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-[#0f172a] flex items-center justify-center">
+        <div className="animate-pulse text-center">
+          <div className="h-8 w-48 bg-gray-200 dark:bg-[#1e293b] rounded mx-auto mb-4"></div>
+          <div className="h-4 w-32 bg-gray-200 dark:bg-[#1e293b] rounded mx-auto"></div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <>
       <div className="min-h-screen bg-gray-50 dark:bg-[#0f172a]">
         <Sidebar 
           darkMode={darkMode} 
           toggleDarkMode={toggleDarkMode} 
-          handleSignOut={handleSignOut} 
+          handleSignOut={handleSignOut}
+          isAdmin={isAdmin}
         />
         <main className={`transition-all duration-300 ${'ml-64'}`}>
           <div className="p-6">

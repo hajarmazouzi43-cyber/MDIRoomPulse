@@ -27,6 +27,7 @@ function LoginForm() {
 
     try {
       if (signUpMode) {
+        // Inscription
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -43,9 +44,24 @@ function LoginForm() {
           }
           throw error
         }
+        
+        // Créer un profil avec le rôle 'user' par défaut
+        if (data.user) {
+          await supabase
+            .from('profiles')
+            .upsert({
+              id: data.user.id,
+              email: data.user.email,
+              role: 'user',
+              email_consent_granted: false,
+              whatsapp_consent_granted: false
+            })
+        }
+        
         toast.success('Account created! Please set your notification preferences.')
         router.push('/consent')
       } else {
+        // Connexion
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -59,7 +75,37 @@ function LoginForm() {
           setLoading(false)
           return
         }
-        toast.success('Welcome back!')
+
+        // ✅ Vérifier le rôle de l'utilisateur
+        let role = 'user'
+        if (data.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', data.user.id)
+            .single()
+          
+          role = profile?.role || 'user'
+          
+          // Si l'utilisateur n'a pas de profil, le créer
+          if (!profile) {
+            await supabase
+              .from('profiles')
+              .insert({
+                id: data.user.id,
+                email: data.user.email,
+                role: 'user'
+              })
+          }
+        }
+
+        // Message de bienvenue selon le rôle
+        if (role === 'admin') {
+          toast.success('👑 Welcome Admin! You have full access.')
+        } else {
+          toast.success('Welcome back!')
+        }
+
         router.push('/dashboard')
       }
     } catch (error: any) {

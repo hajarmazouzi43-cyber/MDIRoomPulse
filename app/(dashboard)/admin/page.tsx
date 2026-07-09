@@ -20,7 +20,7 @@ export default function AdminPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingRoom, setEditingRoom] = useState<any>(null)
   
-  // ✅ Admin Code
+  // Admin Code
   const [showCodeDialog, setShowCodeDialog] = useState(true)
   const [adminCode, setAdminCode] = useState('')
   const [isAdmin, setIsAdmin] = useState(false)
@@ -38,9 +38,28 @@ export default function AdminPage() {
     is_confidential: 'false'
   })
 
-  // ✅ Vérifier le code admin
-  const verifyAdminCode = () => {
+  // Vérifier le code admin et mettre à jour le rôle
+  const verifyAdminCode = async () => {
     if (adminCode === 'ADMINatrsd2647') {
+      // Vérifier si l'utilisateur a le rôle admin
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+        
+        if (profile?.role !== 'admin') {
+          // Mettre à jour le rôle de l'utilisateur
+          await supabase
+            .from('profiles')
+            .update({ role: 'admin' })
+            .eq('id', user.id)
+          toast.info('Admin role granted!')
+        }
+      }
+      
       setIsAdmin(true)
       setShowCodeDialog(false)
       setAdminCode('')
@@ -53,10 +72,24 @@ export default function AdminPage() {
   }
 
   useEffect(() => {
-    if (isAdmin) {
-      fetchData()
+    // Vérifier si l'utilisateur est déjà admin
+    const checkAdminStatus = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+        if (profile?.role === 'admin') {
+          setIsAdmin(true)
+          setShowCodeDialog(false)
+          fetchData()
+        }
+      }
     }
-  }, [isAdmin])
+    checkAdminStatus()
+  }, [])
 
   const fetchData = async () => {
     setLoading(true)
@@ -155,7 +188,7 @@ export default function AdminPage() {
     totalHistory: history.length
   }
 
-  // ✅ Si pas admin, afficher le Dialog de code
+  // Si pas admin, afficher le Dialog de code
   if (!isAdmin) {
     return (
       <div className="container mx-auto py-8 px-4 max-w-md">
