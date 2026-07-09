@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+import { notifyBookingReminder } from '@/lib/notifications'
 import {
   Dialog,
   DialogContent,
@@ -75,6 +76,14 @@ export default function DashboardPage() {
     const { data } = await supabase.from('rooms').select('*').order('name')
     if (data) setRooms(data)
   }
+  
+  // Fonction pour envoyer un rappel
+  const sendReminder = async (bookingId: string) => {
+    const result = await notifyBookingReminder(bookingId)
+    if (result.email > 0 || result.whatsapp > 0) {
+      toast.success(`📢 Reminder sent to ${result.email + result.whatsapp} users`)
+    }
+  }
 
   const fetchBookings = async () => {
     setLoading(true)
@@ -139,6 +148,12 @@ export default function DashboardPage() {
     )
   }
 
+  // ✅ Vérifier si une salle est hors service
+  const isRoomOutOfService = (roomId: string) => {
+    const room = rooms.find(r => r.id === roomId)
+    return room?.is_out_of_service || false
+  }
+
   // Récupérer la réservation pour un créneau
   const getBookingForSlot = (roomId: string, date: string, time: string) => {
     return bookings.find(b => 
@@ -152,14 +167,21 @@ export default function DashboardPage() {
   // Gérer le clic sur une cellule
   const handleCellClick = (roomId: string, date: string, time: string) => {
     if (!user) {
-      toast.error('Please sign in to book a room')
+      toast.error('Veuillez vous connecter pour réserver')
+      return
+    }
+
+    // ✅ Vérifier si la salle est hors service
+    if (isRoomOutOfService(roomId)) {
+      const room = rooms.find(r => r.id === roomId)
+      toast.error(`🚫 Cette salle est hors service${room?.out_of_service_reason ? ` : ${room.out_of_service_reason}` : ''}`)
       return
     }
 
     const booked = isSlotBooked(roomId, date, time)
     if (booked) {
       const booking = getBookingForSlot(roomId, date, time)
-      toast.info(`Reserved: ${booking?.title} - ${booking?.user_email}`)
+      toast.info(`Réservé: ${booking?.title} - ${booking?.user_email}`)
       return
     }
 
@@ -180,7 +202,14 @@ export default function DashboardPage() {
   // Soumettre la réservation
   const handleBookingSubmit = async () => {
     if (!user) {
-      toast.error('Please sign in')
+      toast.error('Veuillez vous connecter')
+      return
+    }
+
+    // ✅ Vérifier à nouveau si la salle est hors service
+    if (isRoomOutOfService(formData.room_id)) {
+      const room = rooms.find(r => r.id === formData.room_id)
+      toast.error(`🚫 Cette salle est hors service${room?.out_of_service_reason ? ` : ${room.out_of_service_reason}` : ''}`)
       return
     }
 
@@ -212,9 +241,9 @@ export default function DashboardPage() {
       })
 
     if (error) {
-      toast.error('Error booking room: ' + error.message)
+      toast.error('Erreur lors de la réservation: ' + error.message)
     } else {
-      toast.success('Room booked successfully!')
+      toast.success('✅ Salle réservée avec succès !')
       setIsModalOpen(false)
       fetchBookings()
       setFormData({
@@ -296,10 +325,13 @@ export default function DashboardPage() {
                   <div className="flex items-center gap-2">
                     <span>{room.name}</span>
                     {room.is_confidential && <span className="text-xs text-red-500">🔒</span>}
+                    {room.is_out_of_service && <span className="text-xs text-gray-500">🚫</span>}
                   </div>
                 </td>
                 {weekDays.map((date) => {
                   const dateStr = date.toISOString().split('T')[0]
+                  const isOutOfService = isRoomOutOfService(room.id)
+                  
                   return (
                     <td key={dateStr} className="border p-1 dark:border-[#334155]">
                       <div className="space-y-1 max-h-[300px] overflow-y-auto">
@@ -314,14 +346,18 @@ export default function DashboardPage() {
                               onClick={() => handleCellClick(room.id, dateStr, time)}
                               className={`
                                 text-xs p-1 rounded cursor-pointer transition-all
-                                ${booked 
-                                  ? 'bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50' 
-                                  : 'bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50'
+                                ${isOutOfService 
+                                  ? 'bg-gray-300 dark:bg-gray-700 cursor-not-allowed opacity-50' 
+                                  : booked 
+                                    ? 'bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50' 
+                                    : 'bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50'
                                 }
                                 ${isCurrentSlot ? 'ring-2 ring-blue-500' : ''}
                               `}
                             >
-                              {booked && booking ? (
+                              {isOutOfService ? (
+                                <span className="text-gray-500">🚫 Hors service</span>
+                              ) : booked && booking ? (
                                 <div className="truncate" title={booking.title}>
                                   {booking.is_confidential ? '🔒 ' : ''}
                                   {time} - {booking.title}
@@ -358,9 +394,16 @@ export default function DashboardPage() {
               >
                 <option value="">Choisir une salle</option>
                 {rooms.map((room) => (
-                  <option key={room.id} value={room.id}>{room.name}</option>
+                  <option key={room.id} value={room.id}>
+                    {room.name} {room.is_out_of_service ? '🚫 (Hors service)' : ''}
+                  </option>
                 ))}
               </select>
+              {formData.room_id && isRoomOutOfService(formData.room_id) && (
+                <p className="text-sm text-red-500 mt-1">
+                  ⚠️ Cette salle est actuellement hors service
+                </p>
+              )}
             </div>
             <div>
               <Label>Titre</Label>
@@ -418,7 +461,11 @@ export default function DashboardPage() {
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>
               Annuler
             </Button>
-            <Button onClick={handleBookingSubmit} className="bg-[#0056B3] hover:bg-[#00449E]">
+            <Button 
+              onClick={handleBookingSubmit} 
+              className="bg-[#0056B3] hover:bg-[#00449E]"
+              disabled={formData.room_id && isRoomOutOfService(formData.room_id)}
+            >
               Réserver
             </Button>
           </DialogFooter>

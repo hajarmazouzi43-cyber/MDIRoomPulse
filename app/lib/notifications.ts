@@ -12,10 +12,11 @@ interface NotificationResult {
 export async function sendEmailNotification(
   userId: string,
   roomName: string,
-  roomEmail: string,  // ← NOUVEAU : email de la salle
-  status: 'occupied' | 'free',
+  roomEmail: string,
+  status: 'occupied' | 'free' | 'reminder' | 'change' | 'cancel',
   currentPeople?: number,
-  maxPeople?: number
+  maxPeople?: number,
+  customMessage?: string
 ): Promise<NotificationResult> {
   const supabase = createClient()
 
@@ -32,20 +33,52 @@ export async function sendEmailNotification(
       return { success: false, error: 'User has not given email consent' }
     }
 
-    const statusText = status === 'occupied' ? 'occupied' : 'available'
-    const subject = status === 'occupied' 
-      ? `Room "${roomName}" is occupied (${currentPeople || 0}/${maxPeople || 0})`
-      : `Room "${roomName}" is now available`
+    let subject = ''
+    let header = ''
+    let body = ''
+    let buttonText = 'View All Rooms'
 
-    console.log(`Sending email from ${roomEmail} to ${profile.email}...`)
+    switch (status) {
+      case 'occupied':
+        subject = `🔴 Room "${roomName}" is occupied`
+        header = 'Room Occupied'
+        body = `The room "${roomName}" is currently occupied.`
+        break
+      case 'free':
+        subject = `🟢 Room "${roomName}" is now available`
+        header = 'Room Available'
+        body = `The room "${roomName}" is now available.`
+        buttonText = 'Book Now'
+        break
+      case 'reminder':
+        subject = `⏰ Reminder: "${roomName}" in 15 minutes`
+        header = 'Booking Reminder'
+        body = customMessage || `Your booking for "${roomName}" starts in 15 minutes.`
+        buttonText = 'View Booking'
+        break
+      case 'change':
+        subject = `🔄 Booking change: "${roomName}"`
+        header = 'Booking Updated'
+        body = customMessage || `The booking for "${roomName}" has been updated.`
+        buttonText = 'View Details'
+        break
+      case 'cancel':
+        subject = `❌ Booking cancelled: "${roomName}"`
+        header = 'Booking Cancelled'
+        body = customMessage || `The booking for "${roomName}" has been cancelled.`
+        buttonText = 'View Rooms'
+        break
+      default:
+        subject = `Room "${roomName}" notification`
+        header = 'Room Notification'
+        body = `Update about "${roomName}".`
+    }
 
     const response = await fetch('/api/send-email', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: roomEmail,  // ← Email de la salle
+        from: roomEmail || 'mdi-roompulse@mdi.com',
         to: profile.email,
         subject: subject,
         html: `
@@ -56,7 +89,7 @@ export async function sendEmailNotification(
                 body { font-family: Arial, sans-serif; color: #333; }
                 .container { max-width: 600px; margin: 0 auto; padding: 20px; }
                 .header { 
-                  background: ${status === 'occupied' ? '#EF4444' : '#10B981'}; 
+                  background: ${status === 'occupied' ? '#EF4444' : status === 'free' ? '#10B981' : '#0056B3'}; 
                   color: white; 
                   padding: 20px; 
                   text-align: center; 
@@ -77,17 +110,16 @@ export async function sendEmailNotification(
             <body>
               <div class="container">
                 <div class="header">
-                  <h1>${status === 'occupied' ? 'Room Occupied' : 'Room Available'}</h1>
+                  <h1>${header}</h1>
                 </div>
                 <div class="content">
-                  <h2>${status === 'occupied' ? 'Room is currently occupied' : 'Good news'}</h2>
-                  <p>The room <strong>"${roomName}"</strong> is now <strong>${statusText}</strong>.</p>
+                  <h2>${body}</h2>
                   ${currentPeople !== undefined && maxPeople !== undefined ? (
-                    `<p>People: ${currentPeople} / ${maxPeople}</p>`
+                    `<p>👥 People: ${currentPeople} / ${maxPeople}</p>`
                   ) : ''}
                   <p style="text-align: center; margin: 30px 0;">
                     <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'}/rooms" class="button">
-                      View All Rooms
+                      ${buttonText}
                     </a>
                   </p>
                 </div>
@@ -115,10 +147,10 @@ export async function sendEmailNotification(
       status: 'sent',
     })
 
-    console.log(`Email sent from ${roomEmail} to ${profile.email}`)
+    console.log(`✅ Email sent from ${roomEmail} to ${profile.email}`)
     return { success: true }
   } catch (error: any) {
-    console.error('Email error:', error)
+    console.error('❌ Email error:', error)
     await supabase.from('notification_logs').insert({
       user_id: userId,
       room_id: null,
@@ -130,12 +162,13 @@ export async function sendEmailNotification(
 }
 
 /**
- * Envoyer une notification WhatsApp (SIMULATION)
+ * Envoyer une notification WhatsApp
  */
 export async function sendWhatsAppNotification(
   userId: string,
   roomName: string,
-  status: 'occupied' | 'free'
+  status: 'occupied' | 'free' | 'reminder' | 'change' | 'cancel',
+  customMessage?: string
 ): Promise<NotificationResult> {
   const supabase = createClient()
 
@@ -150,10 +183,12 @@ export async function sendWhatsAppNotification(
       return { success: false, error: 'User has not given WhatsApp consent' }
     }
 
-    const statusEmoji = status === 'occupied' ? '🔴' : '🟢'
-    const statusText = status === 'occupied' ? 'occupied' : 'available'
+    const statusEmoji = status === 'occupied' ? '🔴' : status === 'free' ? '🟢' : status === 'reminder' ? '⏰' : status === 'change' ? '🔄' : '❌'
+    const statusText = status === 'occupied' ? 'occupied' : status === 'free' ? 'available' : status === 'reminder' ? 'reminder' : status === 'change' ? 'updated' : 'cancelled'
     
-    console.log(`[SIMULATION] WhatsApp to ${profile.phone}: ${statusEmoji} "${roomName}" is ${statusText}`)
+    const message = customMessage || `${statusEmoji} Room "${roomName}" is ${statusText}!\n\nView all rooms: ${process.env.NEXT_PUBLIC_APP_URL}/rooms`
+
+    console.log(`[WhatsApp] to ${profile.phone}: ${message}`)
 
     await supabase.from('notification_logs').insert({
       user_id: userId,
@@ -170,17 +205,16 @@ export async function sendWhatsAppNotification(
 }
 
 /**
- * Notifier tous les abonnés d'une salle
+ * Notifier les abonnés d'une salle (avec préférences)
  */
 export async function notifyRoomStatusChange(roomId: string, status: 'occupied' | 'free') {
   console.log('notifyRoomStatusChange called for room:', roomId, 'status:', status)
   
   const supabase = createClient()
 
-  // 1. Récupérer la salle AVEC room_email, current_people, max_people
   const { data: room, error: roomError } = await supabase
     .from('rooms')
-    .select('name, room_email, current_people, max_people')  // ← Ajout room_email
+    .select('name, room_email, current_people, max_people')
     .eq('id', roomId)
     .single()
 
@@ -192,59 +226,167 @@ export async function notifyRoomStatusChange(roomId: string, status: 'occupied' 
     return { email: 0, whatsapp: 0 }
   }
 
-  // 2. Récupérer les abonnés
+  // Récupérer les abonnés avec préférences
   const { data: subscriptions, error: subError } = await supabase
     .from('subscriptions')
-    .select('user_id, email_enabled, whatsapp_enabled')
+    .select('user_id, email_enabled, whatsapp_enabled, notify_free')
     .eq('room_id', roomId)
 
   console.log('Subscriptions found:', subscriptions?.length || 0)
-  console.log('Subscriptions data:', subscriptions)
-  console.log('Subscriptions error:', subError)
 
   if (!subscriptions || subscriptions.length === 0) {
     console.log(`No subscribers for room: ${room.name}`)
     return { email: 0, whatsapp: 0 }
   }
 
-  // 3. Pour chaque abonné, envoyer la notification
   let emailCount = 0
   let whatsappCount = 0
 
   for (const sub of subscriptions) {
-    console.log(`Processing subscription for user ${sub.user_id}`)
-    
+    // Vérifier si l'utilisateur veut être notifié pour les salles libres
+    if (status === 'free' && sub.notify_free === false) {
+      console.log(`User ${sub.user_id} has disabled free room notifications`)
+      continue
+    }
+
     if (sub.email_enabled) {
-      console.log(`Sending email to user ${sub.user_id}`)
       const result = await sendEmailNotification(
         sub.user_id,
         room.name,
-        room.room_email || 'mdi-roompulse@mdi.com',  // ← Email de la salle
+        room.room_email || 'mdi-roompulse@mdi.com',
         status,
         room.current_people,
         room.max_people
       )
-      if (result.success) {
-        emailCount++
-        console.log(`Email sent to user ${sub.user_id}`)
-      } else {
-        console.log(`Email failed for user ${sub.user_id}:`, result.error)
-      }
+      if (result.success) emailCount++
     }
 
     if (sub.whatsapp_enabled) {
-      console.log(`Sending WhatsApp to user ${sub.user_id}`)
       const result = await sendWhatsAppNotification(sub.user_id, room.name, status)
-      if (result.success) {
-        whatsappCount++
-        console.log(`WhatsApp sent to user ${sub.user_id}`)
-      } else {
-        console.log(`WhatsApp failed for user ${sub.user_id}:`, result.error)
-      }
+      if (result.success) whatsappCount++
     }
   }
 
   console.log(`Notified ${emailCount} by email, ${whatsappCount} by WhatsApp`)
+  return { email: emailCount, whatsapp: whatsappCount }
+}
+
+/**
+ * Notifier un utilisateur pour un rappel de réservation
+ */
+export async function notifyBookingReminder(bookingId: string) {
+  const supabase = createClient()
+
+  const { data: booking, error } = await supabase
+    .from('bookings')
+    .select('*, rooms(name), profiles(email)')
+    .eq('id', bookingId)
+    .single()
+
+  if (error || !booking) {
+    console.error('Booking not found:', bookingId)
+    return { email: 0, whatsapp: 0 }
+  }
+
+  // Vérifier si l'utilisateur veut des rappels
+  const { data: sub } = await supabase
+    .from('subscriptions')
+    .select('notify_reminder')
+    .eq('user_id', booking.user_id)
+    .eq('room_id', booking.room_id)
+    .single()
+
+  if (!sub || !sub.notify_reminder) {
+    console.log(`User ${booking.user_id} has disabled reminders`)
+    return { email: 0, whatsapp: 0 }
+  }
+
+  const roomName = booking.rooms?.name || 'Salle'
+  const customMessage = `⏰ Votre réservation pour "${roomName}" commence dans 15 min !`
+
+  let emailCount = 0
+  let whatsappCount = 0
+
+  if (booking.profiles?.email) {
+    const result = await sendEmailNotification(
+      booking.user_id,
+      roomName,
+      'mdi-roompulse@mdi.com',
+      'reminder',
+      undefined,
+      undefined,
+      customMessage
+    )
+    if (result.success) emailCount++
+  }
+
+  const result = await sendWhatsAppNotification(booking.user_id, roomName, 'reminder', customMessage)
+  if (result.success) whatsappCount++
+
+  return { email: emailCount, whatsapp: whatsappCount }
+}
+
+/**
+ * Notifier un changement de réservation
+ */
+export async function notifyBookingChange(bookingId: string, changeType: 'time' | 'room' | 'cancel', oldData?: any) {
+  const supabase = createClient()
+
+  const { data: booking } = await supabase
+    .from('bookings')
+    .select('*, rooms(name), profiles(email)')
+    .eq('id', bookingId)
+    .single()
+
+  if (!booking) return { email: 0, whatsapp: 0 }
+
+  // Vérifier si l'utilisateur veut des notifications de changement
+  const { data: sub } = await supabase
+    .from('subscriptions')
+    .select('notify_changes')
+    .eq('user_id', booking.user_id)
+    .eq('room_id', booking.room_id)
+    .single()
+
+  if (!sub || !sub.notify_changes) {
+    console.log(`User ${booking.user_id} has disabled change notifications`)
+    return { email: 0, whatsapp: 0 }
+  }
+
+  const roomName = booking.rooms?.name || 'Salle'
+  let customMessage = ''
+
+  switch (changeType) {
+    case 'time':
+      customMessage = `🔄 La réservation pour "${roomName}" a changé : ${oldData?.start_time} → ${booking.start_time}`
+      break
+    case 'room':
+      customMessage = `🔄 La salle a changé : ${oldData?.room_name} → ${roomName}`
+      break
+    case 'cancel':
+      customMessage = `❌ La réservation pour "${roomName}" a été annulée`
+      break
+  }
+
+  let emailCount = 0
+  let whatsappCount = 0
+
+  if (booking.profiles?.email) {
+    const result = await sendEmailNotification(
+      booking.user_id,
+      roomName,
+      'mdi-roompulse@mdi.com',
+      'change',
+      undefined,
+      undefined,
+      customMessage
+    )
+    if (result.success) emailCount++
+  }
+
+  const result = await sendWhatsAppNotification(booking.user_id, roomName, 'change', customMessage)
+  if (result.success) whatsappCount++
+
   return { email: emailCount, whatsapp: whatsappCount }
 }
 
@@ -302,9 +444,7 @@ export async function askWhoIsFree(userId: string, userName: string = 'Someone')
     try {
       const response = await fetch('/api/send-email', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           to: profile.email,
           subject: `Room Status Summary`,

@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 
 interface SubscribeButtonProps {
@@ -16,11 +16,15 @@ interface SubscribeButtonProps {
 export default function SubscribeButton({ roomId, roomName }: SubscribeButtonProps) {
   const [isSubscribed, setIsSubscribed] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [emailEnabled, setEmailEnabled] = useState(true)
-  const [whatsappEnabled, setWhatsappEnabled] = useState(false)
-  const [phoneNumber, setPhoneNumber] = useState('')
-  const [open, setOpen] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
+  const [open, setOpen] = useState(false)
+  const [preferences, setPreferences] = useState({
+    notify_free: true,
+    notify_reminder: true,
+    notify_changes: true,
+    email_enabled: true,
+    whatsapp_enabled: false
+  })
   const supabase = createClient()
 
   useEffect(() => {
@@ -39,46 +43,28 @@ export default function SubscribeButton({ roomId, roomName }: SubscribeButtonPro
 
       if (data) {
         setIsSubscribed(true)
-        setEmailEnabled(data.email_enabled || false)
-        setWhatsappEnabled(data.whatsapp_enabled || false)
+        setPreferences({
+          notify_free: data.notify_free !== false,
+          notify_reminder: data.notify_reminder !== false,
+          notify_changes: data.notify_changes !== false,
+          email_enabled: data.email_enabled !== false,
+          whatsapp_enabled: data.whatsapp_enabled || false
+        })
       }
     }
 
     checkSubscription()
-  }, [roomId])
+  }, [roomId, supabase])
 
   const handleSubscribe = async () => {
     if (!userId) {
-      toast.error('Connecte-toi pour t\'abonner')
+      toast.error('Please sign in to subscribe')
       return
     }
 
     setLoading(true)
     try {
-      // Vérifier si WhatsApp est activé et si le numéro existe
-      if (whatsappEnabled) {
-        const { data: existingNumber } = await supabase
-          .from('whatsapp_numbers')
-          .select('phone_number')
-          .eq('user_id', userId)
-          .single()
-
-        if (!existingNumber && !phoneNumber) {
-          toast.error('Veuillez entrer votre numéro WhatsApp')
-          setLoading(false)
-          return
-        }
-
-        // Sauvegarder le numéro
-        if (phoneNumber && !existingNumber) {
-          await supabase
-            .from('whatsapp_numbers')
-            .insert({ user_id: userId, phone_number: phoneNumber })
-        }
-      }
-
       if (isSubscribed) {
-        // Se désabonner
         const { error } = await supabase
           .from('subscriptions')
           .delete()
@@ -87,25 +73,28 @@ export default function SubscribeButton({ roomId, roomName }: SubscribeButtonPro
 
         if (error) throw error
         setIsSubscribed(false)
-        toast.success(`Désabonné de "${roomName}"`)
+        toast.success(`Unsubscribed from "${roomName}"`)
+        setOpen(false)
       } else {
-        // S'abonner
         const { error } = await supabase
           .from('subscriptions')
           .insert({
             user_id: userId,
             room_id: roomId,
-            email_enabled: emailEnabled,
-            whatsapp_enabled: whatsappEnabled
+            notify_free: preferences.notify_free,
+            notify_reminder: preferences.notify_reminder,
+            notify_changes: preferences.notify_changes,
+            email_enabled: preferences.email_enabled,
+            whatsapp_enabled: preferences.whatsapp_enabled
           })
 
         if (error) throw error
         setIsSubscribed(true)
-        toast.success(`Abonné à "${roomName}" !`)
+        toast.success(`Subscribed to "${roomName}"`)
+        setOpen(false)
       }
-      setOpen(false)
     } catch (error: any) {
-      toast.error(error.message || 'Une erreur est survenue')
+      toast.error(error.message || 'An error occurred')
     } finally {
       setLoading(false)
     }
@@ -117,63 +106,99 @@ export default function SubscribeButton({ roomId, roomName }: SubscribeButtonPro
         onClick={() => setOpen(true)}
         className={`w-full ${isSubscribed ? 'bg-red-500 hover:bg-red-600' : 'bg-[#0056B3] hover:bg-[#00449E]'}`}
       >
-        {isSubscribed ? 'Gérer mon abonnement' : ' S\'abonner'}
+        {isSubscribed ? '🔔 Manage Preferences' : '🔔 Subscribe'}
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {isSubscribed ? 'Gérer l\'abonnement' : 'S\'abonner à'} "{roomName}"
+              {isSubscribed ? 'Manage Subscription' : 'Subscribe to'} "{roomName}"
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* Email */}
+            <p className="text-sm text-gray-500">I want to be notified when:</p>
+            
             <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="email"
-                checked={emailEnabled}
-                onChange={(e) => setEmailEnabled(e.target.checked)}
-                className="w-4 h-4"
+              <Checkbox
+                id="notify_free"
+                checked={preferences.notify_free}
+                onCheckedChange={(checked) => setPreferences({...preferences, notify_free: !!checked})}
               />
-              <Label htmlFor="email"> Notifications par email</Label>
+              <Label htmlFor="notify_free">📢 The room becomes available</Label>
             </div>
 
-            {/* WhatsApp */}
             <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="whatsapp"
-                checked={whatsappEnabled}
-                onChange={(e) => setWhatsappEnabled(e.target.checked)}
-                className="w-4 h-4"
+              <Checkbox
+                id="notify_reminder"
+                checked={preferences.notify_reminder}
+                onCheckedChange={(checked) => setPreferences({...preferences, notify_reminder: !!checked})}
               />
-              <Label htmlFor="whatsapp">💬 Notifications WhatsApp</Label>
+              <Label htmlFor="notify_reminder">⏰ Reminder 15 min before my booking</Label>
             </div>
 
-            {whatsappEnabled && (
-              <div>
-                <Label htmlFor="phone">Numéro WhatsApp</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="+212 6XX XX XX XX"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="notify_changes"
+                checked={preferences.notify_changes}
+                onCheckedChange={(checked) => setPreferences({...preferences, notify_changes: !!checked})}
+              />
+              <Label htmlFor="notify_changes">🔄 Time or room change</Label>
+            </div>
+
+            <div className="border-t pt-4">
+              <p className="text-sm text-gray-500 mb-2">Notification methods:</p>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="email_enabled"
+                  checked={preferences.email_enabled}
+                  onCheckedChange={(checked) => setPreferences({...preferences, email_enabled: !!checked})}
                 />
-                <p className="text-xs text-gray-500 mt-1">Format : +212 6XX XX XX XX</p>
+                <Label htmlFor="email_enabled">📧 Email</Label>
               </div>
-            )}
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="whatsapp_enabled"
+                  checked={preferences.whatsapp_enabled}
+                  onCheckedChange={(checked) => setPreferences({...preferences, whatsapp_enabled: !!checked})}
+                />
+                <Label htmlFor="whatsapp_enabled">💬 WhatsApp</Label>
+              </div>
+            </div>
 
             <Button
               onClick={handleSubscribe}
               disabled={loading}
               className="w-full"
             >
-              {loading ? 'Chargement...' : isSubscribed ? 'Mettre à jour' : 'S\'abonner'}
+              {loading ? 'Loading...' : isSubscribed ? 'Update Preferences' : 'Subscribe'}
             </Button>
+
+            {isSubscribed && (
+              <Button
+                variant="destructive"
+                onClick={async () => {
+                  const { error } = await supabase
+                    .from('subscriptions')
+                    .delete()
+                    .eq('user_id', userId)
+                    .eq('room_id', roomId)
+                  if (error) {
+                    toast.error('Error unsubscribing')
+                  } else {
+                    setIsSubscribed(false)
+                    setOpen(false)
+                    toast.success(`Unsubscribed from "${roomName}"`)
+                  }
+                }}
+                className="w-full"
+              >
+                Unsubscribe
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>

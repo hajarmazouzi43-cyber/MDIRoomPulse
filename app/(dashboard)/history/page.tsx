@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
+import { useRole } from '@/hooks/useRole'
 
 interface HistoryItem {
   id: string
@@ -29,6 +30,8 @@ interface HistoryItem {
   }
   profiles: {
     email: string
+    first_name: string
+    last_name: string
   }
 }
 
@@ -40,6 +43,7 @@ export default function HistoryPage() {
   const [adminCode, setAdminCode] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
   const supabase = createClient()
+  const { isAdmin } = useRole()
 
   useEffect(() => {
     fetchData()
@@ -53,7 +57,7 @@ export default function HistoryPage() {
       .select(`
         *,
         rooms:room_id (name),
-        profiles:changed_by (email)
+        profiles:changed_by (email, first_name, last_name)
       `)
       .order('changed_at', { ascending: false })
       .limit(100)
@@ -67,35 +71,72 @@ export default function HistoryPage() {
     setLoading(false)
   }
 
-const clearHistory = async () => {
-  if (adminCode !== 'ADMINatrsd2647') {
-    toast.error('Invalid admin code')
-    setAdminCode('')
-    return
+  // ✅ Fonction pour formater l'action en français
+  const formatAction = (item: HistoryItem) => {
+    const firstName = item.profiles?.first_name || ''
+    const lastName = item.profiles?.last_name || ''
+    const userName = `${firstName} ${lastName}`.trim() || item.profiles?.email?.split('@')[0] || 'Utilisateur'
+    
+    const action = item.is_occupied ? 'a occupé' : 'a libéré'
+    const roomName = item.rooms?.name || 'salle inconnue'
+    const time = new Date(item.changed_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    
+    return `${userName} ${action} la salle "${roomName}" à ${time}`
   }
 
-  setIsDeleting(true)
-
-  try {
-    // ✅ Appeler la fonction RPC
-    const { data, error } = await supabase.rpc('clear_all_history')
-
-    if (error) {
-      console.error('RPC Error:', error)
-      throw error
+  // ✅ Suppression de l'historique (seulement pour admin)
+  const clearHistory = async () => {
+    if (!isAdmin) {
+      toast.error('Vous n\'avez pas les droits pour supprimer l\'historique')
+      return
     }
 
-    toast.success('History cleared successfully')
-    setShowCodeDialog(false)
-    setAdminCode('')
-    fetchData()
-  } catch (error: any) {
-    console.error('Error:', error)
-    toast.error('Error: ' + (error.message || 'Unknown error'))
-  } finally {
-    setIsDeleting(false)
+    if (adminCode !== 'ADMINatrsd2647') {
+      toast.error('Code admin invalide')
+      setAdminCode('')
+      return
+    }
+
+    setIsDeleting(true)
+    try {
+      // Supprimer en plusieurs lots
+      let deletedCount = 0
+      let hasMore = true
+
+      while (hasMore) {
+        const { data: batch, error: fetchError } = await supabase
+          .from('room_history')
+          .select('id')
+          .limit(50)
+
+        if (fetchError) throw fetchError
+
+        if (!batch || batch.length === 0) {
+          hasMore = false
+          break
+        }
+
+        const ids = batch.map((item: any) => item.id)
+        const { error: deleteError } = await supabase
+          .from('room_history')
+          .delete()
+          .in('id', ids)
+
+        if (deleteError) throw deleteError
+        deletedCount += ids.length
+      }
+
+      toast.success(`${deletedCount} entrées d'historique supprimées`)
+      setShowCodeDialog(false)
+      setAdminCode('')
+      fetchData()
+    } catch (error: any) {
+      toast.error('Erreur lors de la suppression: ' + error.message)
+    } finally {
+      setIsDeleting(false)
+    }
   }
-}
+
   const formatTime = (date: string | null) => {
     if (!date) return 'N/A'
     const d = new Date(date)
@@ -173,7 +214,11 @@ const clearHistory = async () => {
             next ? next.changed_at : (roomInfo?.is_occupied ? roomInfo.occupied_until : null)
           ),
           userEmail: current.profiles?.email || 'Système',
-          peopleInfo: roomInfo ? `${roomInfo.current_people || 0}/${roomInfo.max_people || 1}` : 'N/A'
+          userName: current.profiles?.first_name 
+            ? `${current.profiles.first_name} ${current.profiles.last_name || ''}`.trim() 
+            : current.profiles?.email?.split('@')[0] || 'Système',
+          peopleInfo: roomInfo ? `${roomInfo.current_people || 0}/${roomInfo.max_people || 1}` : 'N/A',
+          actionText: formatAction(current)
         })
       }
     })
@@ -194,7 +239,9 @@ const clearHistory = async () => {
             endTimeFormatted: formatTime(room.occupied_until) || 'En cours',
             duration: calculateDuration(room.occupied_at, room.occupied_until),
             userEmail: 'En cours',
-            peopleInfo: `${room.current_people || 0}/${room.max_people || 1}`
+            userName: 'En cours',
+            peopleInfo: `${room.current_people || 0}/${room.max_people || 1}`,
+            actionText: `Occupation en cours de la salle "${room.name}" depuis ${formatTime(room.occupied_at)}`
           })
         }
       }
@@ -223,31 +270,34 @@ const clearHistory = async () => {
         <h1 className="text-3xl font-bold text-[#0056B3]">
           📋 Historique des salles
         </h1>
-        <Button
-          onClick={() => setShowCodeDialog(true)}
-          variant="destructive"
-          className="bg-red-600 hover:bg-red-700"
-        >
-          🗑️ Clear History
-        </Button>
+        {/* ✅ Bouton Clear History visible uniquement pour l'admin */}
+        {isAdmin && (
+          <Button
+            onClick={() => setShowCodeDialog(true)}
+            variant="destructive"
+            className="bg-red-600 hover:bg-red-700"
+          >
+            🗑️ Clear History
+          </Button>
+        )}
       </div>
 
       {/* Dialog pour le code admin */}
       <Dialog open={showCodeDialog} onOpenChange={setShowCodeDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>🔐 Admin Code Required</DialogTitle>
+            <DialogTitle>🔐 Code Admin Requis</DialogTitle>
             <DialogDescription>
-              Enter the admin code to clear all history. This action is permanent and cannot be undone.
+              Entrez le code admin pour supprimer tout l'historique. Cette action est irréversible.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="admin-code">Admin Code</Label>
+              <Label htmlFor="admin-code">Code Admin</Label>
               <Input
                 id="admin-code"
                 type="password"
-                placeholder="Enter admin code..."
+                placeholder="Entrez le code admin..."
                 value={adminCode}
                 onChange={(e) => setAdminCode(e.target.value)}
                 onKeyDown={(e) => {
@@ -258,7 +308,7 @@ const clearHistory = async () => {
                 autoFocus
               />
               <p className="text-xs text-gray-400">
-                Contact your administrator for the code.
+                Contactez votre administrateur pour le code.
               </p>
             </div>
           </div>
@@ -270,14 +320,14 @@ const clearHistory = async () => {
                 setAdminCode('')
               }}
             >
-              Cancel
+              Annuler
             </Button>
             <Button
               variant="destructive"
               onClick={clearHistory}
               disabled={isDeleting}
             >
-              {isDeleting ? 'Deleting...' : 'Yes, Delete All'}
+              {isDeleting ? 'Suppression...' : 'Oui, Supprimer tout'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -295,11 +345,11 @@ const clearHistory = async () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Salle</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead>Plage horaire</TableHead>
-                  <TableHead>Durée</TableHead>
-                  <TableHead>Utilisateur</TableHead>
+                  <TableHead className="w-[40%]">Action</TableHead>
+                  <TableHead className="w-[15%]">Salle</TableHead>
+                  <TableHead className="w-[15%]">Statut</TableHead>
+                  <TableHead className="w-[20%]">Plage horaire</TableHead>
+                  <TableHead className="w-[10%]">Durée</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -312,6 +362,9 @@ const clearHistory = async () => {
                     `}
                   >
                     <TableCell className="font-medium">
+                      {item.actionText}
+                    </TableCell>
+                    <TableCell>
                       {item.roomName}
                     </TableCell>
                     <TableCell>
@@ -328,9 +381,6 @@ const clearHistory = async () => {
                       <span className="text-sm">
                         {item.duration}
                       </span>
-                    </TableCell>
-                    <TableCell>
-                      {item.userEmail}
                     </TableCell>
                   </TableRow>
                 ))}

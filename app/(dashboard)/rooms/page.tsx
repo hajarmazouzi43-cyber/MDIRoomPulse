@@ -20,6 +20,8 @@ interface Room {
   category: string
   is_occupied: boolean
   is_confidential: boolean
+  is_out_of_service: boolean
+  out_of_service_reason: string | null
   occupied_by: string | null
   occupied_at: string | null
   occupied_until: string | null
@@ -79,12 +81,24 @@ export default function RoomsPage() {
     setLoading(false)
   }
 
-  const allOccupied = rooms.filter(r => r.category !== 'detente').every(r => r.is_occupied)
-  const hasFreeRooms = rooms.some(r => r.category !== 'detente' && !r.is_occupied)
+  const allOccupied = rooms.filter(r => r.category !== 'detente' && !r.is_out_of_service).every(r => r.is_occupied)
+  const hasFreeRooms = rooms.some(r => r.category !== 'detente' && !r.is_out_of_service && !r.is_occupied)
 
   const occupyRoomWithTime = async (roomId: string, roomName: string, peopleCount: number = 1, startTime: string, endTime: string) => {
     if (!user) {
       toast.error('Please sign in to occupy a room')
+      return
+    }
+
+    // ✅ Vérifier si la salle est hors service
+    const { data: roomStatus } = await supabase
+      .from('rooms')
+      .select('is_out_of_service, out_of_service_reason')
+      .eq('id', roomId)
+      .single()
+
+    if (roomStatus?.is_out_of_service) {
+      toast.error(`🚫 Cette salle est hors service${roomStatus.out_of_service_reason ? ` : ${roomStatus.out_of_service_reason}` : ''}`)
       return
     }
 
@@ -259,9 +273,11 @@ export default function RoomsPage() {
               key={room.id} 
               className={`
                 hover:shadow-lg transition-shadow 
-                ${room.is_occupied 
-                  ? 'border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/20' 
-                  : 'border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-900/20'
+                ${room.is_out_of_service 
+                  ? 'border-gray-300 bg-gray-50 dark:border-gray-600 dark:bg-gray-800/30' 
+                  : room.is_occupied 
+                    ? 'border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/20' 
+                    : 'border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-900/20'
                 } 
                 relative
               `}
@@ -271,15 +287,26 @@ export default function RoomsPage() {
                   🔒 Confidential
                 </div>
               )}
+              {room.is_out_of_service && (
+                <div className="absolute top-0 left-0 bg-gray-600 text-white text-xs px-2 py-1 rounded-tr-lg rounded-bl-lg">
+                  🚫 Hors service
+                </div>
+              )}
               <CardHeader className="pb-2">
                 <CardTitle className="flex justify-between items-center">
                   <span className="flex items-center gap-2 dark:text-white">
                     <span>{icon}</span>
                     <span>{room.name}</span>
                   </span>
-                  <Badge className={room.is_occupied ? 'bg-red-500' : 'bg-green-500'}>
-                    {room.is_occupied ? 'Occupied' : 'Available'}
-                  </Badge>
+                  {room.is_out_of_service ? (
+                    <Badge className="bg-gray-500">
+                      🚫 Hors service
+                    </Badge>
+                  ) : (
+                    <Badge className={room.is_occupied ? 'bg-red-500' : 'bg-green-500'}>
+                      {room.is_occupied ? 'Occupied' : 'Available'}
+                    </Badge>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -309,7 +336,13 @@ export default function RoomsPage() {
                   </div>
                 )}
 
-                {!isDetente && user && (
+                {room.is_out_of_service && room.out_of_service_reason && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+                    Raison: {room.out_of_service_reason}
+                  </p>
+                )}
+
+                {!isDetente && user && !room.is_out_of_service && (
                   <div className="flex flex-col gap-2 mt-2">
                     {!room.is_occupied ? (
                       <div className="flex flex-col gap-2 w-full">
@@ -367,40 +400,4 @@ export default function RoomsPage() {
                         <Button
                           onClick={() => freeRoom(room.id, room.name)}
                           className="w-full bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
-                        >
-                          Free & Notify
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {isDetente && (
-                  <div className="text-sm text-gray-500 dark:text-gray-400 italic">
-                    Lounge area - Always available
-                  </div>
-                )}
-
-                <Link href={`/rooms/${room.id}`}>
-                  <p className="text-sm text-blue-600 dark:text-blue-400 hover:underline mt-2">
-                    View details
-                  </p>
-                </Link>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
-
-      <div className="mt-8 p-4 bg-gray-50 dark:bg-[#1e293b] rounded-lg border dark:border-[#334155]">
-        <p className="text-sm text-gray-600 dark:text-gray-300">
-          Total: <span className="font-bold">{rooms.length}</span> spaces
-          <span className="ml-4">Available: <span className="font-bold">{rooms.filter(r => !r.is_occupied && r.category !== 'detente').length}</span></span>
-          <span className="ml-4">Occupied: <span className="font-bold">{rooms.filter(r => r.is_occupied).length}</span></span>
-          <span className="ml-4">Lounge: <span className="font-bold">{rooms.filter(r => r.category === 'detente').length}</span></span>
-          <span className="ml-4">🔒: <span className="font-bold">{rooms.filter(r => r.is_confidential).length}</span></span>
-        </p>
-      </div>
-    </div>
-  )
-}
+                       

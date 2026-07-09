@@ -36,7 +36,7 @@ export default function Sidebar({ darkMode, toggleDarkMode, handleSignOut, isAdm
     { name: 'Rooms', icon: Building2, href: '/rooms' },
     { name: 'Floor Plan', icon: Map, href: '/floor-plan' },
     { name: 'History', icon: History, href: '/history' },
-    { name: 'Calendar', icon: Calendar, href: '/calendar' },
+
     { name: 'AI Assistant', icon: Bot, href: '/ai-assistant' },
     { name: 'Analytics', icon: BarChart3, href: '/analytics' },
     

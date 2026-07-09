@@ -35,13 +35,14 @@ export default function AdminPage() {
     category: 'poste',
     max_people: '',
     room_email: '',
-    is_confidential: 'false'
+    is_confidential: 'false',
+    is_out_of_service: 'false',
+    out_of_service_reason: ''
   })
 
   // Vérifier le code admin et mettre à jour le rôle
   const verifyAdminCode = async () => {
     if (adminCode === 'ADMINatrsd2647') {
-      // Vérifier si l'utilisateur a le rôle admin
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         const { data: profile } = await supabase
@@ -51,7 +52,6 @@ export default function AdminPage() {
           .single()
         
         if (profile?.role !== 'admin') {
-          // Mettre à jour le rôle de l'utilisateur
           await supabase
             .from('profiles')
             .update({ role: 'admin' })
@@ -72,7 +72,6 @@ export default function AdminPage() {
   }
 
   useEffect(() => {
-    // Vérifier si l'utilisateur est déjà admin
     const checkAdminStatus = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
@@ -116,6 +115,8 @@ export default function AdminPage() {
         location: formData.location?.trim() || '',
         category: formData.category || 'poste',
         is_confidential: formData.is_confidential === 'true',
+        is_out_of_service: formData.is_out_of_service === 'true',
+        out_of_service_reason: formData.out_of_service_reason || null,
         room_email: formData.room_email?.trim() || formData.name.toLowerCase().replace(/\s/g, '') + '@mdi.com'
       }
 
@@ -145,7 +146,18 @@ export default function AdminPage() {
         fetchData()
         setIsDialogOpen(false)
         setEditingRoom(null)
-        setFormData({ name: '', capacity: '', equipment: '', location: '', category: 'poste', max_people: '', room_email: '', is_confidential: 'false' })
+        setFormData({ 
+          name: '', 
+          capacity: '', 
+          equipment: '', 
+          location: '', 
+          category: 'poste', 
+          max_people: '', 
+          room_email: '', 
+          is_confidential: 'false',
+          is_out_of_service: 'false',
+          out_of_service_reason: ''
+        })
       }
     } catch (error: any) {
       console.error('Error:', error)
@@ -174,7 +186,9 @@ export default function AdminPage() {
       category: room.category || 'poste',
       max_people: room.max_people?.toString() || '',
       room_email: room.room_email || '',
-      is_confidential: room.is_confidential ? 'true' : 'false'
+      is_confidential: room.is_confidential ? 'true' : 'false',
+      is_out_of_service: room.is_out_of_service ? 'true' : 'false',
+      out_of_service_reason: room.out_of_service_reason || ''
     })
     setIsDialogOpen(true)
   }
@@ -185,10 +199,10 @@ export default function AdminPage() {
     occupiedRooms: rooms.filter(r => r.is_occupied).length,
     freeRooms: rooms.filter(r => !r.is_occupied).length,
     confidentialRooms: rooms.filter(r => r.is_confidential).length,
+    outOfServiceRooms: rooms.filter(r => r.is_out_of_service).length,
     totalHistory: history.length
   }
 
-  // Si pas admin, afficher le Dialog de code
   if (!isAdmin) {
     return (
       <div className="container mx-auto py-8 px-4 max-w-md">
@@ -243,7 +257,6 @@ export default function AdminPage() {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      {/* Header */}
       <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
         <h1 className="text-3xl font-bold text-[#0056B3]">Admin Dashboard</h1>
         <div className="flex gap-2">
@@ -319,6 +332,26 @@ export default function AdminPage() {
                   />
                   <Label htmlFor="confidential">🔒 Confidential Room</Label>
                 </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="out_of_service"
+                    checked={formData.is_out_of_service === 'true'}
+                    onChange={(e) => setFormData({...formData, is_out_of_service: e.target.checked ? 'true' : 'false'})}
+                    className="w-4 h-4"
+                  />
+                  <Label htmlFor="out_of_service">🚫 Out of Service</Label>
+                </div>
+                {formData.is_out_of_service === 'true' && (
+                  <div>
+                    <Label>Reason (optional)</Label>
+                    <Input
+                      value={formData.out_of_service_reason}
+                      onChange={(e) => setFormData({...formData, out_of_service_reason: e.target.value})}
+                      placeholder="Maintenance, Renovation, etc."
+                    />
+                  </div>
+                )}
                 <Button onClick={handleSubmit} className="w-full">
                   {editingRoom ? 'Update' : 'Add'} Room
                 </Button>
@@ -329,7 +362,7 @@ export default function AdminPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-6 mb-8">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">Total Rooms</CardTitle>
@@ -370,6 +403,14 @@ export default function AdminPage() {
             <p className="text-3xl font-bold text-purple-500">{stats.confidentialRooms}</p>
           </CardContent>
         </Card>
+        <Card className="border-l-4 border-gray-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">🚫 Out of Service</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-gray-500">{stats.outOfServiceRooms}</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Rooms Table */}
@@ -387,6 +428,7 @@ export default function AdminPage() {
                 <TableHead>People</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>🔒</TableHead>
+                <TableHead>🚫</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -398,12 +440,21 @@ export default function AdminPage() {
                   <TableCell>{room.capacity}</TableCell>
                   <TableCell>{room.current_people || 0}/{room.max_people || room.capacity || 0}</TableCell>
                   <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium text-white ${room.is_occupied ? 'bg-red-500' : 'bg-green-500'}`}>
-                      {room.is_occupied ? 'Occupied' : 'Free'}
-                    </span>
+                    {room.is_out_of_service ? (
+                      <span className="px-2 py-1 rounded-full text-xs font-medium text-white bg-gray-500">
+                        🚫 Hors service
+                      </span>
+                    ) : (
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium text-white ${room.is_occupied ? 'bg-red-500' : 'bg-green-500'}`}>
+                        {room.is_occupied ? 'Occupied' : 'Free'}
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell>
                     {room.is_confidential ? '🔒' : '-'}
+                  </TableCell>
+                  <TableCell>
+                    {room.is_out_of_service ? '🚫' : '-'}
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
