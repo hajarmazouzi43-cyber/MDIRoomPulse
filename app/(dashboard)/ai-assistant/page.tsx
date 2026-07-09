@@ -48,7 +48,8 @@ export default function AIAssistantPage() {
       {
         id: 'welcome',
         role: 'assistant',
-        content: '👋 Bonjour ! Je suis votre assistant IA connecté à la base de données.\n\nJe peux vous donner des informations en temps réel sur :\n• 📊 Statistiques des salles\n• 🏢 Disponibilité des salles\n• 📅 Réservations\n• 📋 Historique\n• 💡 Recommandations\n\nEssayez : "Quelles sont les salles libres ?" ou "Statistiques du mois"'
+        content: '👋 Bonjour ! Je suis votre assistant IA connecté à la base de données.\n\nJe peux vous donner des informations en temps réel sur :\n• 📊 Statistiques des salles\n• 🏢 Disponibilité des salles\n• 📅 Réservations\n• 📋 Historique\n• 💡 Recommandations\n\nEssayez : "Quelles sont les salles libres ?" ou "Statistiques du mois"',
+        timestamp: new Date()
       },
     ])
   }, [])
@@ -108,6 +109,7 @@ export default function AIAssistantPage() {
       const totalPeople = rooms.reduce((acc, r) => acc + (r.current_people || 0), 0)
       const maxCapacity = rooms.reduce((acc, r) => acc + (r.max_people || r.capacity || 0), 0)
       const confidentialRooms = rooms.filter(r => r.is_confidential).length
+      const outOfServiceRooms = rooms.filter(r => r.is_out_of_service).length
 
       return `📊 **Statistiques en temps réel** :
 • 🏢 Total salles : ${totalRooms}
@@ -117,12 +119,13 @@ export default function AIAssistantPage() {
 • 👥 Personnes présentes : ${totalPeople} / ${maxCapacity}
 • 📅 Réservations ce mois : ${totalBookings}
 • 📋 Événements historiques : ${totalHistory}
-• 🔒 Salles confidentielles : ${confidentialRooms}`
+• 🔒 Salles confidentielles : ${confidentialRooms}
+• 🚫 Salles hors service : ${outOfServiceRooms}`
     }
 
     // --- 3. SALLES LIBRES ---
     if (lower.match(/libre|disponible|free|available|vide|vacant|qui est/i)) {
-      const freeList = rooms.filter(r => !r.is_occupied && r.category !== 'detente')
+      const freeList = rooms.filter(r => !r.is_occupied && r.category !== 'detente' && !r.is_out_of_service)
       if (freeList.length === 0) {
         return '🟢 **Aucune salle libre** pour le moment. Vous pouvez vous installer dans le coin détente (fauteuils confortables).'
       }
@@ -235,12 +238,13 @@ export default function AIAssistantPage() {
     if (roomMatch) {
       const r = roomMatch
       return `📋 **Détails de "${r.name}"** :
-• Statut : ${r.is_occupied ? '🔴 Occupée' : '🟢 Libre'}
+• Statut : ${r.is_out_of_service ? '🚫 Hors service' : r.is_occupied ? '🔴 Occupée' : '🟢 Libre'}
 • Capacité : ${r.capacity} personnes
 • Personnes : ${r.current_people || 0} / ${r.max_people || r.capacity || 0}
 • Localisation : ${r.location || 'N/A'}
 • Équipements : ${r.equipment?.join(', ') || 'Aucun'}
 ${r.is_confidential ? '• 🔒 Salle confidentielle' : ''}
+${r.is_out_of_service && r.out_of_service_reason ? `• 🚫 Raison : ${r.out_of_service_reason}` : ''}
 ${r.is_occupied && r.occupied_until ? `• ⏱️ Occupée jusqu'à ${new Date(r.occupied_until).toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})}` : ''}`
     }
 
