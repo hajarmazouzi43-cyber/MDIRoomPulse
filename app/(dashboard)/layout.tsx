@@ -17,6 +17,7 @@ export default function DashboardLayout({
   const [loading, setLoading] = useState(true)
   const [darkMode, setDarkMode] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   const router = useRouter()
   const supabase = createClient()
 
@@ -38,7 +39,6 @@ export default function DashboardLayout({
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
       
-      // Vérifier si l'utilisateur est admin
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')
@@ -57,7 +57,6 @@ export default function DashboardLayout({
         router.push('/login')
       } else {
         setUser(session.user)
-        // Re-vérifier le rôle
         supabase
           .from('profiles')
           .select('role')
@@ -99,8 +98,14 @@ export default function DashboardLayout({
           toggleDarkMode={toggleDarkMode} 
           handleSignOut={handleSignOut}
           isAdmin={isAdmin}
+          onToggle={setSidebarCollapsed}
         />
-        <main className={`transition-all duration-300 ${'ml-64'}`}>
+        <main 
+          className={`
+            transition-all duration-300 ease-in-out
+            ${sidebarCollapsed ? 'ml-16' : 'ml-64'}
+          `}
+        >
           <div className="p-6">
             {children}
           </div>

@@ -1,0 +1,12 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  textbelt:
+    image: typpo/textbelt:latest
+    container_name: textbelt
+    ports:
+      - "9000:9000"
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production

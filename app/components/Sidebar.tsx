@@ -12,12 +12,12 @@ import {
   User, 
   Shield, 
   BarChart3, 
-  Calendar, 
   Bot,
   LogOut,
   Moon,
   Sun,
-  
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -25,22 +25,34 @@ interface SidebarProps {
   toggleDarkMode: () => void
   handleSignOut: () => void
   isAdmin: boolean
+  onToggle?: (collapsed: boolean) => void
 }
 
-export default function Sidebar({ darkMode, toggleDarkMode, handleSignOut, isAdmin }: SidebarProps) {
+export default function Sidebar({ 
+  darkMode, 
+  toggleDarkMode, 
+  handleSignOut, 
+  isAdmin,
+  onToggle 
+}: SidebarProps) {
   const pathname = usePathname()
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(true)
+
+  const toggleCollapse = () => {
+    const newState = !collapsed
+    setCollapsed(newState)
+    if (onToggle) {
+      onToggle(newState)
+    }
+  }
 
   const navItems = [
     { name: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
     { name: 'Rooms', icon: Building2, href: '/rooms' },
     { name: 'Floor Plan', icon: Map, href: '/floor-plan' },
     { name: 'History', icon: History, href: '/history' },
-
     { name: 'AI Assistant', icon: Bot, href: '/ai-assistant' },
     { name: 'Analytics', icon: BarChart3, href: '/analytics' },
-    
-        // ✅ Admin seulement
     ...(isAdmin ? [
       { name: 'Admin', icon: Shield, href: '/admin' },
     ] : []),
@@ -52,28 +64,28 @@ export default function Sidebar({ darkMode, toggleDarkMode, handleSignOut, isAdm
       fixed left-0 top-0 z-50 h-screen 
       bg-white dark:bg-[#0f172a] 
       border-r border-gray-200 dark:border-[#334155]
-      transition-all duration-300
+      transition-all duration-300 ease-in-out
       ${collapsed ? 'w-16' : 'w-64'}
     `}>
       {/* Logo */}
-      <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-[#334155]">
+      <div className="flex items-center justify-between h-16 px-3 border-b border-gray-200 dark:border-[#334155]">
         {!collapsed && (
-          <Link href="/dashboard" className="text-xl font-bold text-[#0056B3] dark:text-[#00A3E0]">
+          <Link href="/dashboard" className="text-lg font-bold text-[#0056B3] dark:text-[#00A3E0] truncate">
             MDI RoomPulse
           </Link>
         )}
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setCollapsed(!collapsed)}
-          className="text-gray-500 dark:text-gray-400"
+          onClick={toggleCollapse}
+          className="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#1e293b]"
         >
-          {collapsed ? '→' : '←'}
+          {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
         </Button>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+      <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
           const Icon = item.icon
@@ -87,9 +99,10 @@ export default function Sidebar({ darkMode, toggleDarkMode, handleSignOut, isAdm
                   ? 'bg-[#0056B3] text-white dark:bg-[#0056B3]' 
                   : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#1e293b]'
                 }
+                ${collapsed ? 'justify-center' : ''}
               `}>
-                <Icon size={20} />
-                {!collapsed && <span className="text-sm font-medium">{item.name}</span>}
+                <Icon size={20} className="shrink-0" />
+                {!collapsed && <span className="text-sm font-medium truncate">{item.name}</span>}
               </div>
             </Link>
           )
@@ -97,24 +110,24 @@ export default function Sidebar({ darkMode, toggleDarkMode, handleSignOut, isAdm
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-gray-200 dark:border-[#334155] p-3 space-y-2">
+      <div className="border-t border-gray-200 dark:border-[#334155] p-2 space-y-2">
         <Button
           variant="ghost"
           size="sm"
           onClick={toggleDarkMode}
-          className="w-full justify-start text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#1e293b]"
+          className={`w-full text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#1e293b] ${collapsed ? 'justify-center' : 'justify-start'}`}
         >
-          {darkMode ? <Sun size={20} className="mr-3" /> : <Moon size={20} className="mr-3" />}
-          {!collapsed && (darkMode ? 'Light Mode' : 'Dark Mode')}
+          {darkMode ? <Sun size={20} className="shrink-0" /> : <Moon size={20} className="shrink-0" />}
+          {!collapsed && <span className="ml-3 text-sm">{darkMode ? 'Light Mode' : 'Dark Mode'}</span>}
         </Button>
         <Button
           variant="ghost"
           size="sm"
           onClick={handleSignOut}
-          className="w-full justify-start text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+          className={`w-full text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 ${collapsed ? 'justify-center' : 'justify-start'}`}
         >
-          <LogOut size={20} className="mr-3" />
-          {!collapsed && 'Sign Out'}
+          <LogOut size={20} className="shrink-0" />
+          {!collapsed && <span className="ml-3 text-sm">Sign Out</span>}
         </Button>
       </div>
     </aside>

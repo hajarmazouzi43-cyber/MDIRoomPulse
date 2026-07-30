@@ -1,52 +1,68 @@
-import { Resend } from 'resend'
+// app/api/send-email/route.ts
+import nodemailer from 'nodemailer'
 import { NextResponse } from 'next/server'
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY
+const GMAIL_USER = process.env.GMAIL_USER
+const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD
 
-if (!RESEND_API_KEY) {
-  console.error('❌ RESEND_API_KEY is not set in environment variables')
+const DEFAULT_FROM = `MDI RoomPulse <${GMAIL_USER}>`
+
+let transporter: nodemailer.Transporter | null = null
+
+function getTransporter() {
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: GMAIL_USER,
+        pass: GMAIL_APP_PASSWORD,
+      },
+    })
+  }
+  return transporter
 }
-
-const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null
 
 export async function POST(request: Request) {
   try {
-    if (!resend) {
-      console.error('❌ Resend is not configured')
+    if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
+      console.error('❌ GMAIL_USER ou GMAIL_APP_PASSWORD manquant dans .env.local')
       return NextResponse.json(
-        { error: 'Email service not configured' },
+        { error: 'GMAIL_USER / GMAIL_APP_PASSWORD non configurés sur le serveur' },
         { status: 500 }
       )
     }
 
-    const { to, subject, html, from } = await request.json()
+    const { to, subject, html } = await request.json()
 
-    const fromEmail = 'MDI RoomPulse <onboarding@resend.dev>'
-    const replyTo = from || 'mdi-roompulse@mdi.com'
-
-    console.log('📧 Sending from:', fromEmail)
-    console.log('📧 Reply-to:', replyTo)
-    console.log('📧 To:', to)
-
-    const { data, error } = await resend.emails.send({
-      from: fromEmail,
-      to: to,
-      subject: subject,
-      html: html,
-      headers: {
-        'Reply-To': replyTo
-      }
-    })
-
-    if (error) {
-      console.error('Resend error:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+    if (!to || !subject || !html) {
+      return NextResponse.json(
+        { error: 'Champs requis manquants: to, subject, html' },
+        { status: 400 }
+      )
     }
 
-    console.log('✅ Email sent:', data)
-    return NextResponse.json({ success: true, data })
+    const cleanTo = to.trim().toLowerCase()
+
+    console.log(`📤 Tentative d'envoi (Gmail SMTP) — from: "${DEFAULT_FROM}", to: "${cleanTo}"`)
+
+    const info = await getTransporter().sendMail({
+      from: DEFAULT_FROM,
+      to: cleanTo,
+      subject,
+      html,
+    })
+
+    console.log('✅ Email sent:', info.messageId)
+    return NextResponse.json({ success: true, data: { id: info.messageId } })
   } catch (error: any) {
-    console.error('Error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('❌ Gmail SMTP error complet:', {
+      message: error.message,
+      code: error.code,
+      response: error.response,
+    })
+    return NextResponse.json(
+      { error: error.message || 'Erreur serveur', code: error.code },
+      { status: 500 }
+    )
   }
 }
