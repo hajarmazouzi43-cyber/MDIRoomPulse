@@ -16,6 +16,8 @@ const PRIMARY = '#2554E0'
 /**
  * Récupère les réservations "confirmed" d'une salle qui sont EN COURS ou À VENIR
  */
+// lib/notifications.ts - Version corrigée
+
 export async function getActiveOrUpcomingBookings(
   supabase: AnySupabaseClient,
   roomId: string,
@@ -24,12 +26,25 @@ export async function getActiveOrUpcomingBookings(
   const now = new Date()
   const todayStr = now.toISOString().split('T')[0]
 
-  const { data, error } = await supabase
+  // ✅ Supprimer la condition sur 'status' si la colonne n'existe pas
+  let query = supabase
     .from('bookings')
     .select(select)
     .eq('room_id', roomId)
-    .eq('status', 'confirmed')
     .gte('booking_date', todayStr)
+
+  // Vérifier si la colonne status existe avant de l'utiliser
+  const { data: columnExists } = await supabase
+    .from('bookings')
+    .select('status')
+    .limit(1)
+    .maybeSingle()
+
+  if (columnExists !== undefined) {
+    query = query.eq('status', 'confirmed')
+  }
+
+  const { data, error } = await query
 
   if (error) {
     console.error('❌ Erreur requête bookings:', error)

@@ -2,21 +2,17 @@
 import nodemailer from 'nodemailer'
 import { NextResponse } from 'next/server'
 
+// Gmail SMTP — voir /api/notify-new-signup pour le contexte complet.
 const GMAIL_USER = process.env.GMAIL_USER
 const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD
-
 const DEFAULT_FROM = `MDI RoomPulse <${GMAIL_USER}>`
 
 let transporter: nodemailer.Transporter | null = null
-
 function getTransporter() {
   if (!transporter) {
     transporter = nodemailer.createTransport({
       service: 'gmail',
-      auth: {
-        user: GMAIL_USER,
-        pass: GMAIL_APP_PASSWORD,
-      },
+      auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
     })
   }
   return transporter
