@@ -335,8 +335,23 @@ export default function AdminPage() {
   }
 
   // ✅ VÉRIFICATION DES UTILISATEURS
+// ✅ VÉRIFICATION DES UTILISATEURS
   const handleVerifyUser = async (userId: string, userEmail: string, isVerified: boolean) => {
     try {
+      // 0. Confirmer l'email dans Supabase Auth (sinon le login reste
+      // bloqué même si profiles.is_verified passe à true)
+      if (!isVerified) {
+        const authRes = await fetch('/api/admin/verify-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId })
+        })
+        if (!authRes.ok) {
+          const authResult = await authRes.json()
+          throw new Error(authResult.error || 'Échec de la confirmation Supabase Auth')
+        }
+      }
+
       // 1. Mettre à jour le statut de vérification
       const { error } = await supabase
         .from('profiles')
