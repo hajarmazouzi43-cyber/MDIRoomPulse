@@ -1,6 +1,7 @@
 // lib/notifications.ts
 import { createClient } from '@/lib/supabase/client'
 import { sendSMS } from '@/lib/sms/textbelt'
+import { getLocalDateString } from '@/lib/dateUtils'
 
 type AnySupabaseClient = ReturnType<typeof createClient>
 
@@ -24,7 +25,7 @@ export async function getActiveOrUpcomingBookings(
   select: string = 'id, user_id, title, booking_date, start_time, end_time'
 ): Promise<any[]> {
   const now = new Date()
-  const todayStr = now.toISOString().split('T')[0]
+  const todayStr = getLocalDateString(now)
 
   // ✅ Supprimer la condition sur 'status' si la colonne n'existe pas
   let query = supabase

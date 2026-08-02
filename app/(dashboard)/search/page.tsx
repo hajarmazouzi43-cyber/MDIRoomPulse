@@ -170,7 +170,15 @@ export default function SearchPage() {
               {filteredRooms.length} salle{filteredRooms.length > 1 ? 's' : ''} disponible{filteredRooms.length > 1 ? 's' : ''}
             </h2>
             <span className="text-sm text-gray-500">
-              {new Date(searchDate).toLocaleDateString('fr-FR')} - {startTime} → {endTime}
+              {(() => {
+                // On construit la date "manuellement" (année, mois, jour) au
+                // lieu de faire new Date(searchDate) : cette dernière
+                // interprète une chaîne "YYYY-MM-DD" comme minuit UTC, ce qui
+                // peut afficher la veille selon le fuseau horaire du
+                // navigateur (bug classique de décalage d'un jour).
+                const [y, m, d] = searchDate.split('-').map(Number)
+                return new Date(y, m - 1, d).toLocaleDateString('fr-FR')
+              })()} - {startTime} → {endTime}
             </span>
           </div>
 

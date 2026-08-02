@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { getLocalDateString } from '@/lib/dateUtils'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -144,8 +145,8 @@ export default function DashboardPage() {
 
   const fetchBookings = async () => {
     setLoading(true)
-    const startDate = weekDays[0].toISOString().split('T')[0]
-    const endDate = weekDays[6].toISOString().split('T')[0]
+    const startDate = getLocalDateString(weekDays[0])
+    const endDate = getLocalDateString(weekDays[6])
 
     const { data } = await supabase
       .from('bookings')
@@ -207,7 +208,7 @@ export default function DashboardPage() {
   const goToToday = () => setCurrentDate(new Date())
 
   const getBookingsForDay = (date: Date, roomId: string) => {
-    const dateStr = date.toISOString().split('T')[0]
+    const dateStr = getLocalDateString(date)
     return bookings.filter(b =>
       b.room_id === roomId &&
       b.booking_date === dateStr
@@ -220,7 +221,7 @@ export default function DashboardPage() {
       return
     }
 
-    const dateStr = date.toISOString().split('T')[0]
+    const dateStr = getLocalDateString(date)
 
     const existing = bookings.find(b =>
       b.room_id === roomId &&
@@ -290,7 +291,7 @@ export default function DashboardPage() {
       // Synchronisation avec la page Rooms : si ce créneau couvre l'instant présent
       // (réservation "maintenant"), on marque directement la salle comme occupée
       const now = new Date()
-      const todayStr = now.toISOString().split('T')[0]
+      const todayStr = getLocalDateString(now)
       const nowTime = now.toTimeString().slice(0, 5)
 
       if (
@@ -390,9 +391,12 @@ export default function DashboardPage() {
             <input
               ref={dateInputRef}
               type="date"
-              value={currentDate.toISOString().split('T')[0]}
+              value={getLocalDateString(currentDate)}
               onChange={(e) => {
-                if (e.target.value) setCurrentDate(new Date(e.target.value))
+                if (e.target.value) {
+                  const [y, m, d] = e.target.value.split('-').map(Number)
+                  setCurrentDate(new Date(y, m - 1, d))
+                }
               }}
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             />
@@ -519,7 +523,7 @@ export default function DashboardPage() {
         </h3>
         <div className="space-y-1.5">
           {bookings
-            .filter(b => b.booking_date === new Date().toISOString().split('T')[0])
+            .filter(b => b.booking_date === getLocalDateString())
             .map((booking) => {
               const dayIndex = new Date(booking.booking_date).getDay()
               const color = dayAccent[dayIndex === 0 ? 6 : dayIndex - 1]
@@ -535,7 +539,7 @@ export default function DashboardPage() {
                 </div>
               )
             })}
-          {bookings.filter(b => b.booking_date === new Date().toISOString().split('T')[0]).length === 0 && (
+          {bookings.filter(b => b.booking_date === getLocalDateString()).length === 0 && (
             <p className="text-sm text-gray-400 dark:text-gray-500">Aucune réservation aujourd'hui</p>
           )}
         </div>

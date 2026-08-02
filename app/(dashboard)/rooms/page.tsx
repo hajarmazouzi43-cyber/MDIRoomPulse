@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { notifyRoomStatusChange, askWhoIsFree, notifyRoomOutOfService } from '@/lib/notifications'
+import { getLocalDateString } from '@/lib/dateUtils'
 import {
   Users,
   MapPin,
@@ -268,7 +269,9 @@ export default function RoomsPage() {
     }
 
     const newTotal = Math.min(currentPeople + peopleCount, maxPeople)
-    const today = new Date().toISOString().split('T')[0]
+    // getLocalDateString() évite le bug de décalage d'un jour de
+    // new Date().toISOString().split('T')[0] (conversion UTC).
+    const today = getLocalDateString()
     const startDateTime = new Date(`${today}T${startTime}:00`)
     const endDateTime = new Date(`${today}T${endTime}:00`)
 
@@ -348,7 +351,7 @@ export default function RoomsPage() {
     }
 
     const nowTime = new Date().toTimeString().slice(0, 5)
-    const todayStr = new Date().toISOString().split('T')[0]
+    const todayStr = getLocalDateString()
 
     const { data: activeBookings } = await supabase
       .from('bookings')
