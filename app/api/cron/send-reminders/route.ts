@@ -15,7 +15,27 @@
 import { NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/serviceRole'
 import { notifyBookingReminder } from '@/lib/notifications'
-import { getLocalDateString } from '@/lib/dateUtils'
+
+// Les serveurs Vercel tournent en UTC, alors que `start_time` est stocké
+// tel que saisi par l'utilisateur dans SON fuseau horaire (Maroc,
+// Africa/Casablanca). On calcule donc explicitement "maintenant" dans ce
+// fuseau précis, peu importe le fuseau du serveur qui exécute ce code —
+// sinon la comparaison d'heures est décalée du fuseau du serveur (souvent
+// 1h ou plus), et la fenêtre "5 minutes avant" ne correspond jamais à la
+// bonne heure réelle.
+function getCasablancaParts(date: Date) {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Africa/Casablanca',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  })
+  const parts = formatter.formatToParts(date)
+  const get = (type: string) => parts.find(p => p.type === type)?.value || ''
+  return {
+    dateStr: `${get('year')}-${get('month')}-${get('day')}`,
+    timeStr: `${get('hour')}:${get('minute')}`,
+  }
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -27,12 +47,10 @@ export async function GET(request: Request) {
 
   const supabase = createServiceRoleClient()
   const now = new Date()
-  const todayStr = getLocalDateString(now)
-  const nowTime = now.toTimeString().slice(0, 5) // "HH:MM"
+  const { dateStr: todayStr, timeStr: nowTime } = getCasablancaParts(now)
 
-  // Fenêtre de 5 minutes à partir de maintenant, au format "HH:MM"
   const inFiveMin = new Date(now.getTime() + 5 * 60000)
-  const inFiveMinTime = inFiveMin.toTimeString().slice(0, 5)
+  const { timeStr: inFiveMinTime } = getCasablancaParts(inFiveMin)
 
   const { data: bookings, error } = await supabase
     .from('bookings')
