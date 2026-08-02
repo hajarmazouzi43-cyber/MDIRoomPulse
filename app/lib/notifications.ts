@@ -416,15 +416,21 @@ export async function notifyBookingReminder(bookingId: string, client?: AnySupab
     .select('notify_reminder')
     .eq('user_id', booking.user_id)
     .eq('room_id', booking.room_id)
-    .single()
+    .maybeSingle()
 
-  if (!sub || !sub.notify_reminder) {
+  // Par défaut, un utilisateur qui réserve une salle veut être rappelé,
+  // même s'il n'a pas explicitement "suivi" (subscribe) cette salle —
+  // ne pas bloquer le rappel juste parce qu'aucune ligne `subscriptions`
+  // n'existe pour ce couple utilisateur/salle.
+  const reminderEnabled = sub ? sub.notify_reminder !== false : true
+
+  if (!reminderEnabled) {
     console.log(`User ${booking.user_id} has disabled reminders`)
     return { email: 0, sms: 0 }
   }
 
   const roomName = booking.rooms?.name || 'Salle'
-  const customMessage = `⏰ RoomPulse: Votre réservation pour "${roomName}" commence dans 15 min !`
+  const customMessage = `⏰ RoomPulse: Votre réservation pour "${roomName}" (${booking.start_time}) commence bientôt !`
 
   let emailCount = 0
   let smsCount = 0

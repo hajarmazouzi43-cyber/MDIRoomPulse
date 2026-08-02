@@ -1,0 +1,71 @@
+// app/api/cron/send-reminders/route.ts
+//
+// Vérifie les réservations qui commencent dans les 5 prochaines minutes et
+// envoie un rappel (email + SMS) à leur propriétaire, une seule fois par
+// réservation (grâce à la colonne `reminder_sent`).
+//
+// Cette route est faite pour être appelée régulièrement par un service de
+// cron EXTERNE (ex: cron-job.org, gratuit), toutes les 1 à 5 minutes — le
+// plan gratuit de Vercel ("Hobby") limite les Cron Jobs internes à 1
+// exécution par jour, ce qui est trop rare pour un rappel "5 minutes avant".
+//
+// Sécurité : protégée par un secret passé en query param, pour éviter que
+// n'importe qui puisse déclencher l'envoi de rappels.
+
+import { NextResponse } from 'next/server'
+import { createServiceRoleClient } from '@/lib/supabase/serviceRole'
+import { notifyBookingReminder } from '@/lib/notifications'
+import { getLocalDateString } from '@/lib/dateUtils'
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const secret = searchParams.get('secret')
+
+  if (secret !== process.env.CRON_SECRET) {
+    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+  }
+
+  const supabase = createServiceRoleClient()
+  const now = new Date()
+  const todayStr = getLocalDateString(now)
+  const nowTime = now.toTimeString().slice(0, 5) // "HH:MM"
+
+  // Fenêtre de 5 minutes à partir de maintenant, au format "HH:MM"
+  const inFiveMin = new Date(now.getTime() + 5 * 60000)
+  const inFiveMinTime = inFiveMin.toTimeString().slice(0, 5)
+
+  const { data: bookings, error } = await supabase
+    .from('bookings')
+    .select('id, user_id, room_id, title, booking_date, start_time, end_time, rooms(name)')
+    .eq('booking_date', todayStr)
+    .eq('status', 'confirmed')
+    .eq('reminder_sent', false)
+    .gte('start_time', nowTime)
+    .lte('start_time', inFiveMinTime)
+
+  if (error) {
+    console.error('❌ Erreur récupération réservations (cron reminders):', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  if (!bookings || bookings.length === 0) {
+    return NextResponse.json({ success: true, sent: 0 })
+  }
+
+  let sent = 0
+  for (const booking of bookings) {
+    try {
+      await notifyBookingReminder(booking.id, supabase)
+      await supabase
+        .from('bookings')
+        .update({ reminder_sent: true })
+        .eq('id', booking.id)
+      sent++
+      console.log(`✅ Rappel envoyé pour la réservation ${booking.id}`)
+    } catch (err: any) {
+      console.error(`❌ Échec rappel pour la réservation ${booking.id}:`, err.message)
+    }
+  }
+
+  return NextResponse.json({ success: true, sent, checked: bookings.length })
+}

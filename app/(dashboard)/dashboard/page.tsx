@@ -280,7 +280,8 @@ export default function DashboardPage() {
         title: formData.title,
         booking_date: formData.booking_date,
         start_time: formData.start_time,
-        end_time: formData.end_time
+        end_time: formData.end_time,
+        status: 'confirmed'
       })
 
     if (error) {
