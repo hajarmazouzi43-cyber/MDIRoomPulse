@@ -1,13 +1,11 @@
 // app/api/cron/send-reminders/route.ts
 //
-// Vérifie les réservations qui commencent dans les 5 prochaines minutes et
+// Vérifie les réservations qui commencent dans les 15 prochaines minutes et
 // envoie un rappel (email + SMS) à leur propriétaire, une seule fois par
 // réservation (grâce à la colonne `reminder_sent`).
 //
-// Cette route est faite pour être appelée régulièrement par un service de
-// cron EXTERNE (ex: cron-job.org, gratuit), toutes les 1 à 5 minutes — le
-// plan gratuit de Vercel ("Hobby") limite les Cron Jobs internes à 1
-// exécution par jour, ce qui est trop rare pour un rappel "5 minutes avant".
+// Cette route est faite pour être appelée régulièrement par une tâche
+// planifiée externe (GitHub Actions), toutes les 5 minutes.
 //
 // Sécurité : protégée par un secret passé en query param, pour éviter que
 // n'importe qui puisse déclencher l'envoi de rappels.
@@ -21,7 +19,7 @@ import { notifyBookingReminder } from '@/lib/notifications'
 // Africa/Casablanca). On calcule donc explicitement "maintenant" dans ce
 // fuseau précis, peu importe le fuseau du serveur qui exécute ce code —
 // sinon la comparaison d'heures est décalée du fuseau du serveur (souvent
-// 1h ou plus), et la fenêtre "5 minutes avant" ne correspond jamais à la
+// 1h ou plus), et la fenêtre "15 minutes avant" ne correspond jamais à la
 // bonne heure réelle.
 function getCasablancaParts(date: Date) {
   const formatter = new Intl.DateTimeFormat('en-CA', {
@@ -49,8 +47,8 @@ export async function GET(request: Request) {
   const now = new Date()
   const { dateStr: todayStr, timeStr: nowTime } = getCasablancaParts(now)
 
-  const inFiveMin = new Date(now.getTime() + 5 * 60000)
-  const { timeStr: inFiveMinTime } = getCasablancaParts(inFiveMin)
+  const inFifteenMin = new Date(now.getTime() + 15 * 60000)
+  const { timeStr: inFifteenMinTime } = getCasablancaParts(inFifteenMin)
 
   const { data: bookings, error } = await supabase
     .from('bookings')
@@ -59,7 +57,7 @@ export async function GET(request: Request) {
     .eq('status', 'confirmed')
     .eq('reminder_sent', false)
     .gte('start_time', nowTime)
-    .lte('start_time', inFiveMinTime)
+    .lte('start_time', inFifteenMinTime)
 
   if (error) {
     console.error('❌ Erreur récupération réservations (cron reminders):', error)
