@@ -400,14 +400,21 @@ export async function notifyRoomStatusChange(
 export async function notifyBookingReminder(bookingId: string, client?: AnySupabaseClient) {
   const supabase = client || createClient()
 
+  // On ne joint QUE `rooms(name)` ici, pas `profiles(...)` : contrairement
+  // à `rooms`, la relation entre `bookings.user_id` et `profiles` n'est pas
+  // toujours reconnue automatiquement par PostgREST pour une jointure
+  // imbriquée, ce qui faisait échouer cette requête silencieusement (et
+  // marquait quand même le rappel comme "envoyé"). On récupère le profil
+  // séparément, via sendEmailNotification/sendSMSNotification, exactement
+  // comme le fait le reste de ce fichier.
   const { data: booking, error } = await supabase
     .from('bookings')
-    .select('*, rooms(name), profiles(email, phone, sms_consent_granted)')
+    .select('*, rooms(name)')
     .eq('id', bookingId)
     .single()
 
   if (error || !booking) {
-    console.error('Booking not found:', bookingId)
+    console.error('❌ Booking not found (notifyBookingReminder):', bookingId, error)
     return { email: 0, sms: 0 }
   }
 
@@ -435,17 +442,17 @@ export async function notifyBookingReminder(bookingId: string, client?: AnySupab
   let emailCount = 0
   let smsCount = 0
 
-  if (booking.profiles?.email) {
-    const result = await sendEmailNotification(
-      booking.user_id, roomName, undefined as any, 'reminder', undefined, undefined, customMessage, supabase
-    )
-    if (result.success) emailCount++
+  const emailResult = await sendEmailNotification(
+    booking.user_id, roomName, undefined as any, 'reminder', undefined, undefined, customMessage, supabase
+  )
+  if (emailResult.success) {
+    emailCount++
+  } else {
+    console.error(`❌ Rappel email non envoyé pour la réservation ${bookingId}:`, emailResult.error)
   }
 
-  if (booking.profiles?.phone && booking.profiles?.sms_consent_granted) {
-    const result = await sendSMSNotification(booking.user_id, roomName, 'reminder', customMessage, supabase)
-    if (result.success) smsCount++
-  }
+  const smsResult = await sendSMSNotification(booking.user_id, roomName, 'reminder', customMessage, supabase)
+  if (smsResult.success) smsCount++
 
   return { email: emailCount, sms: smsCount }
 }
