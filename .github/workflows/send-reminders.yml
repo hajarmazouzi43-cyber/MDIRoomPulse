@@ -1,0 +1,14 @@
+name: Send booking reminders
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  send-reminders:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call reminder endpoint
+        run: |
+          curl -sf "https://mdiroompulse.vercel.app/api/cron/send-reminders?secret=${{ secrets.CRON_SECRET }}"
