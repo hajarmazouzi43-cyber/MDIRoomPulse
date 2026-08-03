@@ -2,8 +2,11 @@ name: Send booking reminders
 
 on:
   schedule:
+    # Toutes les 5 minutes. GitHub Actions ne garantit pas une précision à
+    # la minute près (souvent quelques minutes de retard possible), mais
+    # c'est largement suffisant pour un rappel "15 minutes avant".
     - cron: '*/5 * * * *'
-  workflow_dispatch: {}
+  workflow_dispatch: {} # permet aussi de le déclencher manuellement depuis l'onglet Actions
 
 jobs:
   send-reminders:
@@ -12,3 +15,6 @@ jobs:
       - name: Call reminder endpoint
         run: |
           curl -sf "https://mdiroompulse.vercel.app/api/cron/send-reminders?secret=${{ secrets.CRON_SECRET }}"
+      - name: Sync room occupied status
+        run: |
+          curl -sf "https://mdiroompulse.vercel.app/api/cron/sync-room-status?secret=${{ secrets.CRON_SECRET }}"
