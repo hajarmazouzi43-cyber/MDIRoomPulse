@@ -17,8 +17,10 @@ interface Booking {
   room_id: string
   user_id: string
   title: string
-  start: string
-  end: string
+  booking_date: string
+  start_time: string
+  end_time: string
+  status: string
   room_name: string
 }
 
@@ -55,7 +57,8 @@ export default function BookingPage() {
     const { data: bookingsData } = await supabase
       .from('bookings')
       .select('*, rooms(name)')
-      .order('start')
+      .order('booking_date')
+      .order('start_time')
     
     const { data: roomsData } = await supabase
       .from('rooms')
@@ -89,8 +92,27 @@ export default function BookingPage() {
       return
     }
 
-    if (!newBooking.title || !newBooking.room_id) {
+    if (!newBooking.title || !newBooking.room_id || !newBooking.start || !newBooking.end) {
       toast.error('Please fill all fields')
+      return
+    }
+
+    // newBooking.start / .end sont des chaînes "datetime-local" du type
+    // "2026-08-05T14:30". On les découpe en booking_date / start_time /
+    // end_time car c'est le schéma utilisé partout ailleurs (occupation
+    // directe, rappels, sync du statut des salles) — sans ça, la salle ne
+    // devient jamais "occupée" ni "libre" automatiquement pour cette
+    // réservation.
+    const [startDatePart, startTimePart] = newBooking.start.split('T')
+    const [endDatePart, endTimePart] = newBooking.end.split('T')
+
+    if (startDatePart !== endDatePart) {
+      toast.error('Start and end must be on the same day')
+      return
+    }
+
+    if (endTimePart <= startTimePart) {
+      toast.error('End time must be after start time')
       return
     }
 
@@ -98,8 +120,10 @@ export default function BookingPage() {
       .from('bookings')
       .insert({
         title: newBooking.title,
-        start: newBooking.start,
-        end: newBooking.end,
+        booking_date: startDatePart,
+        start_time: startTimePart,
+        end_time: endTimePart,
+        status: 'confirmed',
         room_id: newBooking.room_id,
         user_id: user.id
       })
@@ -179,8 +203,8 @@ export default function BookingPage() {
               .map(b => ({
                 id: b.id,
                 title: `${b.room_name} - ${b.title}`,
-                start: b.start,
-                end: b.end,
+                start: `${b.booking_date}T${b.start_time}`,
+                end: `${b.booking_date}T${b.end_time}`,
                 extendedProps: { booking: b }
               }))
             }
