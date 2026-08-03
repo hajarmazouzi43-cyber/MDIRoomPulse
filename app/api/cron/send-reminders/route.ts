@@ -1,11 +1,13 @@
 // app/api/cron/send-reminders/route.ts
 //
-// Vérifie les réservations qui commencent dans les 15 prochaines minutes et
+// Vérifie les réservations qui commencent dans les 5 prochaines minutes et
 // envoie un rappel (email + SMS) à leur propriétaire, une seule fois par
 // réservation (grâce à la colonne `reminder_sent`).
 //
-// Cette route est faite pour être appelée régulièrement par une tâche
-// planifiée externe (GitHub Actions), toutes les 5 minutes.
+// Cette route est faite pour être appelée régulièrement par un service de
+// cron EXTERNE (ex: cron-job.org, gratuit), toutes les 1 à 5 minutes — le
+// plan gratuit de Vercel ("Hobby") limite les Cron Jobs internes à 1
+// exécution par jour, ce qui est trop rare pour un rappel "5 minutes avant".
 //
 // Sécurité : protégée par un secret passé en query param, pour éviter que
 // n'importe qui puisse déclencher l'envoi de rappels.
@@ -19,7 +21,7 @@ import { notifyBookingReminder } from '@/lib/notifications'
 // Africa/Casablanca). On calcule donc explicitement "maintenant" dans ce
 // fuseau précis, peu importe le fuseau du serveur qui exécute ce code —
 // sinon la comparaison d'heures est décalée du fuseau du serveur (souvent
-// 1h ou plus), et la fenêtre "15 minutes avant" ne correspond jamais à la
+// 1h ou plus), et la fenêtre "5 minutes avant" ne correspond jamais à la
 // bonne heure réelle.
 function getCasablancaParts(date: Date) {
   const formatter = new Intl.DateTimeFormat('en-CA', {
@@ -65,7 +67,23 @@ export async function GET(request: Request) {
   }
 
   if (!bookings || bookings.length === 0) {
-    return NextResponse.json({ success: true, sent: 0 })
+    // Debug temporaire : affiche les valeurs calculées + les réservations
+    // du jour (sans les filtres d'heure), pour voir exactement où ça bloque.
+    const { data: todaysBookings } = await supabase
+      .from('bookings')
+      .select('id, booking_date, start_time, status, reminder_sent')
+      .eq('booking_date', todayStr)
+
+    return NextResponse.json({
+      success: true,
+      sent: 0,
+      debug: {
+        todayStr,
+        nowTime,
+        inFifteenMinTime,
+        todaysBookings
+      }
+    })
   }
 
   let sent = 0
