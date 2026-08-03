@@ -89,13 +89,20 @@ export async function GET(request: Request) {
   let sent = 0
   for (const booking of bookings) {
     try {
-      await notifyBookingReminder(booking.id, supabase)
-      await supabase
-        .from('bookings')
-        .update({ reminder_sent: true })
-        .eq('id', booking.id)
-      sent++
-      console.log(`✅ Rappel envoyé pour la réservation ${booking.id}`)
+      const result = await notifyBookingReminder(booking.id, supabase)
+      // On ne marque comme "envoyé" que si un email ou un SMS est
+      // réellement parti — sinon, un échec silencieux (comme un consentement
+      // manquant) serait marqué à tort comme traité, et plus jamais retenté.
+      if (result.email > 0 || result.sms > 0) {
+        await supabase
+          .from('bookings')
+          .update({ reminder_sent: true })
+          .eq('id', booking.id)
+        sent++
+        console.log(`✅ Rappel envoyé pour la réservation ${booking.id}`)
+      } else {
+        console.error(`⚠️ Aucun envoi réel pour la réservation ${booking.id} (email/SMS = 0) — non marqué comme envoyé`)
+      }
     } catch (err: any) {
       console.error(`❌ Échec rappel pour la réservation ${booking.id}:`, err.message)
     }

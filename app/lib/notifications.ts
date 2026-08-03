@@ -225,7 +225,15 @@ export async function sendEmailNotification(
         body = `Mise à jour concernant <strong>${roomName}</strong>.`
     }
 
-    const response = await fetch('/api/send-email', {
+    // URL absolue obligatoire : un chemin relatif ("/api/send-email") ne
+    // fonctionne que depuis un navigateur (qui le complète avec l'origine
+    // de la page actuelle). Appelé depuis un contexte serveur (comme notre
+    // cron de rappels), fetch() a besoin d'une URL complète, sinon il
+    // échoue silencieusement — l'erreur était avalée par le catch plus bas,
+    // sans jamais faire planter le reste du code (d'où le "reminder_sent =
+    // true" malgré l'absence réelle d'email envoyé).
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const response = await fetch(`${baseUrl}/api/send-email`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -650,7 +658,8 @@ export async function askWhoIsFree(userId: string, userName: string = 'Quelqu\'u
 
   if (profile?.email_consent_granted && profile?.email) {
     try {
-      await fetch('/api/send-email', {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+      await fetch(`${baseUrl}/api/send-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
