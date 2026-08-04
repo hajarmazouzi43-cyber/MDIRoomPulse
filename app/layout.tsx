@@ -3,6 +3,7 @@ import { Inter, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Toaster } from "sonner";
+import { LanguageProvider } from "@/lib/i18n/LanguageContext";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -41,8 +42,10 @@ export default function RootLayout({
       )}
     >
       <body className="min-h-full flex flex-col">
-        {children}
-        <Toaster position="bottom-right" />
+        <LanguageProvider>
+          {children}
+          <Toaster position="bottom-right" />
+        </LanguageProvider>
       </body>
     </html>
   );

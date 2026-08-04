@@ -54,7 +54,7 @@ export default function ConsentPage() {
 
   const handleSubmit = async () => {
     if (!emailConsent && !whatsappConsent) {
-      toast.warning('Veuillez accorder au moins un consentement pour continuer')
+      toast.warning('Merci de donner au moins un consentement pour continuer')
       return
     }
 
@@ -99,25 +99,6 @@ export default function ConsentPage() {
           })
       }
 
-      // On vérifie si le compte a déjà été validé par un administrateur avant
-      // d'envoyer l'utilisateur vers le dashboard (même logique que login/page.tsx).
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role, is_verified')
-        .eq('id', user.id)
-        .single()
-
-      const role = profile?.role || 'user'
-      const isVerified = profile?.is_verified || false
-
-      if (role !== 'admin' && !isVerified) {
-        toast.success('Merci ! Vos préférences ont été enregistrées.')
-        toast.info('⏳ Votre compte est en attente de validation par un administrateur.')
-        await supabase.auth.signOut()
-        router.push('/login?waiting=true')
-        return
-      }
-
       toast.success('Merci ! Vos préférences ont été enregistrées.')
       router.push('/dashboard')
     } catch (error: any) {
@@ -129,35 +110,35 @@ export default function ConsentPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8">
-      <Card className="w-full max-w-lg">
-        <CardHeader>
-          <CardTitle className="text-2xl text-[#0056B3] text-center">
-             Préférences de notification
+      <Card className="w-full max-w-lg shadow-lg">
+        <CardHeader className="text-center pb-2">
+          <CardTitle className="text-2xl text-[#0056B3]">
+            Préférences de notification
           </CardTitle>
-          <CardDescription className="text-center">
+          <CardDescription className="mt-1">
             Merci de donner votre consentement pour recevoir des notifications
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-5 pt-6">
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
             <h3 className="font-semibold text-blue-800">Pourquoi avons-nous besoin de votre consentement ?</h3>
             <p className="text-sm text-blue-700 mt-1">
-              MDI RoomPulse envoie des notifications lorsque des salles se libèrent.
-              Nous respectons votre vie privée et ne vous enverrons que les notifications que vous avez explicitement acceptées.
+              MDI RoomPulse envoie des notifications quand des salles se libèrent.
+              Nous respectons votre vie privée et n'envoyons que les notifications que vous acceptez explicitement.
             </p>
           </div>
 
           {phoneNumber && (
             <div className="bg-green-50 p-3 rounded-lg border border-green-200">
               <p className="text-sm text-green-700">
-                 Numéro WhatsApp enregistré : <strong>{phoneNumber}</strong>
+                📱 Numéro WhatsApp enregistré : <strong>{phoneNumber}</strong>
               </p>
             </div>
           )}
 
-          <div className="space-y-4">
-            <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-gray-50">
+          <div className="space-y-3">
+            <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-gray-50 transition-colors">
               <Checkbox
                 id="email-consent"
                 checked={emailConsent}
@@ -166,18 +147,18 @@ export default function ConsentPage() {
               />
               <div>
                 <Label htmlFor="email-consent" className="font-semibold">
-                   Notifications par email
+                  📧 Notifications par email
                 </Label>
                 <p className="text-sm text-gray-500">
-                  Recevez une notification par email dès qu'une salle se libère
+                  Recevoir une notification par email quand une salle se libère
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
-                  Nous vous enverrons uniquement les mises à jour pertinentes sur la disponibilité des salles
+                  Nous n'envoyons que les mises à jour pertinentes sur la disponibilité des salles
                 </p>
               </div>
             </div>
 
-            <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-gray-50">
+            <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-gray-50 transition-colors">
               <Checkbox
                 id="whatsapp-consent"
                 checked={whatsappConsent}
@@ -189,11 +170,11 @@ export default function ConsentPage() {
                   💬 Notifications WhatsApp
                 </Label>
                 <p className="text-sm text-gray-500">
-                  Recevez une notification par WhatsApp dès qu'une salle se libère
+                  Recevoir une notification WhatsApp quand une salle se libère
                 </p>
                 {!phoneNumber && (
                   <p className="text-xs text-red-500 mt-1">
-                     Vous n'avez pas encore ajouté de numéro WhatsApp. Vous pouvez l'ajouter depuis votre profil.
+                    ⚠️ Vous n'avez pas encore ajouté de numéro WhatsApp. Vous pouvez l'ajouter dans votre profil.
                   </p>
                 )}
               </div>
@@ -201,30 +182,30 @@ export default function ConsentPage() {
           </div>
 
           <div className="bg-gray-50 p-4 rounded-lg border text-sm text-gray-600">
-            <p className="font-medium"> Ce à quoi vous consentez :</p>
+            <p className="font-medium">✅ Ce à quoi vous consentez :</p>
             <ul className="list-disc list-inside mt-2 space-y-1">
               <li>Recevoir des notifications sur la disponibilité des salles</li>
-              <li>Recevoir des alertes lorsque toutes les salles sont occupées</li>
-              <li>Notifications personnalisées pour les salles suivies</li>
+              <li>Recevoir une alerte quand toutes les salles sont occupées</li>
+              <li>Des notifications personnalisées pour les salles suivies</li>
             </ul>
             <p className="mt-2 text-xs text-gray-500">
-              Vous pouvez modifier ces préférences à tout moment depuis votre profil.
+              Vous pouvez modifier ces préférences à tout moment dans votre profil.
               Nous ne partageons jamais vos données avec des tiers.
             </p>
           </div>
         </CardContent>
 
-        <CardFooter className="flex flex-col space-y-3">
+        <CardFooter className="flex flex-col gap-3 pt-6">
           <Button
             onClick={handleSubmit}
             disabled={loading || (!emailConsent && !whatsappConsent)}
-            className="w-full bg-[#0056B3] hover:bg-[#00449E]"
+            className="w-full h-11 bg-[#0056B3] hover:bg-[#00449E]"
           >
             {loading ? 'Enregistrement...' : 'Enregistrer mes préférences'}
           </Button>
           {!emailConsent && !whatsappConsent && (
             <p className="text-xs text-red-500 text-center">
-              Vous devez accorder au moins un consentement pour continuer
+              Vous devez donner au moins un consentement pour continuer
             </p>
           )}
         </CardFooter>

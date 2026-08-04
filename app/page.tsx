@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Zap, Bell, BarChart3, ArrowRight } from 'lucide-react'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 
 /**
  * Reveal — fades + lifts children in once they enter the viewport.
@@ -71,7 +73,7 @@ const ROOM_COLORS: Record<string, string> = {
  * in on load, then genuinely cycles room availability, standing in for what
  * the product actually does rather than decorating around it.
  */
-function BlueprintHero() {
+function BlueprintHero({ availableLabel, occupiedLabel }: { availableLabel: string; occupiedLabel: string }) {
   const [statuses, setStatuses] = useState<Record<string, RoomStatus>>({
     a1: 'available',
     a2: 'occupied',
@@ -218,38 +220,43 @@ function BlueprintHero() {
       </svg>
 
       <div className="relative mt-2 flex items-center justify-center gap-6 font-tech text-xs text-[#6B6B7A]">
-        <span className="flex items-center gap-1.5">🙂 disponible</span>
-        <span className="flex items-center gap-1.5">😐 occupée</span>
+        <span className="flex items-center gap-1.5">🙂 {availableLabel}</span>
+        <span className="flex items-center gap-1.5">😐 {occupiedLabel}</span>
       </div>
     </div>
   )
 }
 
-const FEATURES = [
-  {
-    plaque: 'SALLE A · TEMPS RÉEL',
-    icon: Zap,
-    title: 'Statut instantané',
-    desc: "Le statut de chaque salle se met à jour à la seconde où elle se libère ou s'occupe.",
-    color: '#7C5CFC',
-  },
-  {
-    plaque: 'SALLE B · ALERTES',
-    icon: Bell,
-    title: 'Notifications ciblées',
-    desc: 'Un e-mail ou un SMS part automatiquement aux personnes abonnées à une salle.',
-    color: '#14B8A6',
-  },
-  {
-    plaque: 'SALLE C · STATISTIQUES',
-    icon: BarChart3,
-    title: "Taux d'occupation",
-    desc: "Des tableaux de bord clairs pour repérer les salles sous-utilisées et celles saturées.",
-    color: '#F5A623',
-  },
-]
+function getFeatures(t: (key: string) => string) {
+  return [
+    {
+      plaque: t('home.features.realtime.plaque'),
+      icon: Zap,
+      title: t('home.features.realtime.title'),
+      desc: t('home.features.realtime.desc'),
+      color: '#7C5CFC',
+    },
+    {
+      plaque: t('home.features.alerts.plaque'),
+      icon: Bell,
+      title: t('home.features.alerts.title'),
+      desc: t('home.features.alerts.desc'),
+      color: '#14B8A6',
+    },
+    {
+      plaque: t('home.features.analytics.plaque'),
+      icon: BarChart3,
+      title: t('home.features.analytics.title'),
+      desc: t('home.features.analytics.desc'),
+      color: '#F5A623',
+    },
+  ]
+}
 
 export default function HomePage() {
+  const { t } = useLanguage()
+  const FEATURES = getFeatures(t)
+
   return (
     <div className="min-h-screen flex flex-col bg-[#F5F7FA] text-[#1A1A2E]">
       <header className="border-b border-[#E7E5EC] bg-[#F5F7FA]/80 backdrop-blur sticky top-0 z-20">
@@ -257,12 +264,13 @@ export default function HomePage() {
           <h1 className="font-display text-xl font-bold tracking-tight text-[#7C5CFC]">
             MDI RoomPulse
           </h1>
-          <div className="space-x-3">
+          <div className="flex items-center gap-3">
+            <LanguageSwitcher />
             <Link href="/login">
-              <Button variant="outline" className="border-[#DAD7E3]">Se connecter</Button>
+              <Button variant="outline" className="border-[#DAD7E3]">{t('home.nav.login')}</Button>
             </Link>
             <Link href="/login?signup=true">
-              <Button className="bg-[#7C5CFC] hover:bg-[#6242D6]">Créer un compte</Button>
+              <Button className="bg-[#7C5CFC] hover:bg-[#6242D6]">{t('home.nav.signup')}</Button>
             </Link>
           </div>
         </div>
@@ -274,32 +282,31 @@ export default function HomePage() {
           <div className="max-w-7xl mx-auto px-6 py-20 lg:py-28 grid lg:grid-cols-2 gap-16 items-center">
             <div>
               <span className="hero-fade-in d1 inline-block font-tech text-xs tracking-[0.2em] uppercase text-[#7C5CFC] bg-white border border-[#DAD7E3] rounded-full px-3 py-1 mb-6">
-                Suivi en temps réel
+                {t('home.hero.badge')}
               </span>
               <h2 className="hero-fade-in d2 font-display text-4xl md:text-6xl font-bold leading-[1.05] mb-6">
-                Vos salles de réunion,<br />
-                <span className="text-[#7C5CFC]">visibles en un coup d&rsquo;œil</span>
+                {t('home.hero.titleLine1')}<br />
+                <span className="text-[#7C5CFC]">{t('home.hero.titleLine2')}</span>
               </h2>
               <p className="hero-fade-in d3 text-lg text-[#6B6B7A] max-w-lg mb-10">
-                Visualisez la disponibilité de chaque salle, recevez une alerte dès qu&rsquo;un espace se libère,
-                et suivez l&rsquo;usage réel de vos locaux.
+                {t('home.hero.subtitle')}
               </p>
               <div className="hero-fade-in d4 flex flex-col sm:flex-row gap-4">
                 <Link href="/login">
                   <Button size="lg" className="text-base px-8 bg-[#7C5CFC] hover:bg-[#6242D6] group">
-                    Commencer
+                    {t('home.hero.ctaPrimary')}
                     <ArrowRight className="ml-1.5 w-4 h-4 transition-transform group-hover:translate-x-1" />
                   </Button>
                 </Link>
                 <Link href="/dashboard">
                   <Button size="lg" variant="outline" className="text-base px-8 border-[#DAD7E3]">
-                    Voir les salles
+                    {t('home.hero.ctaSecondary')}
                   </Button>
                 </Link>
               </div>
             </div>
 
-            <BlueprintHero />
+            <BlueprintHero availableLabel={t('home.blueprint.available')} occupiedLabel={t('home.blueprint.occupied')} />
           </div>
         </section>
 
@@ -307,7 +314,7 @@ export default function HomePage() {
         <section className="max-w-7xl mx-auto px-6 py-20">
           <Reveal>
             <h3 className="font-display text-2xl font-bold mb-10 text-center">
-              Ce que RoomPulse change au quotidien
+              {t('home.features.title')}
             </h3>
           </Reveal>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -337,14 +344,14 @@ export default function HomePage() {
           <div className="max-w-7xl mx-auto px-6 py-16 text-center">
             <Reveal>
               <h3 className="font-display text-2xl md:text-3xl font-bold mb-4">
-                Prêt à voir vos salles autrement ?
+                {t('home.ctaStrip.title')}
               </h3>
               <p className="text-[#6B6B7A] mb-8 max-w-xl mx-auto">
-                Créez un compte en une minute et connectez votre première salle.
+                {t('home.ctaStrip.subtitle')}
               </p>
               <Link href="/login?signup=true">
                 <Button size="lg" className="text-base px-8 bg-[#7C5CFC] hover:bg-[#6242D6]">
-                  Créer un compte gratuitement
+                  {t('home.ctaStrip.cta')}
                 </Button>
               </Link>
             </Reveal>
@@ -354,7 +361,7 @@ export default function HomePage() {
 
       <footer className="border-t border-[#E7E5EC]">
         <div className="max-w-7xl mx-auto px-6 py-8 text-center text-sm text-[#6B6B7A]">
-          © 2026 MDI RoomPulse — ENSA Berrechid
+          {t('home.footer.text')}
         </div>
       </footer>
     </div>

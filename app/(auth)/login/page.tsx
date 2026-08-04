@@ -78,21 +78,9 @@ if (data.user) {
             await notifyAdminOfNewUser(data.user.email, data.user.id)
           }
         }
-
-        if (data.session) {
-          // La confirmation par email est désactivée côté Supabase : l'utilisateur
-          // dispose déjà d'une session active. On l'envoie donc directement vers la
-          // page de consentement (sinon elle n'est jamais affichée, car on ne passe
-          // dans ce cas jamais par le lien de confirmation qui pointe vers /consent).
-          toast.success('✅ Compte créé ! Merci de renseigner vos préférences de notification.')
-          router.push('/consent')
-        } else {
-          // La confirmation par email est activée : l'utilisateur devra cliquer sur le
-          // lien reçu par email, qui le redirigera automatiquement vers /consent
-          // (voir emailRedirectTo ci-dessus).
-          toast.success('✅ Compte créé ! Un email a été envoyé à l\'administrateur pour validation.')
-          router.push('/login?waiting=true')
-        }
+        
+        toast.success('✅ Compte créé ! Un email a été envoyé à l\'administrateur pour validation.')
+        router.push('/login?waiting=true')
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
@@ -155,16 +143,16 @@ if (data.user) {
   }
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader className="text-center">
+    <Card className="w-full max-w-md shadow-lg">
+      <CardHeader className="text-center pb-2">
         <CardTitle className="text-2xl text-[#0056B3]">MDI RoomPulse</CardTitle>
-        <CardDescription>
+        <CardDescription className="mt-1">
           {signUpMode ? 'Créer un compte' : 'Connectez-vous à votre espace'}
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
+        <CardContent className="space-y-5 pt-6">
+          <div className="space-y-1.5">
             <Label htmlFor="email">Adresse email</Label>
             <Input
               id="email"
@@ -174,10 +162,11 @@ if (data.user) {
               onChange={(e) => setEmail(e.target.value)}
               required
               disabled={loading}
+              className="h-11"
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label htmlFor="password">Mot de passe</Label>
             <Input
               id="password"
@@ -188,17 +177,18 @@ if (data.user) {
               required
               disabled={loading}
               minLength={6}
+              className="h-11"
             />
             {signUpMode && (
-              <p className="text-xs text-gray-500">Minimum 6 caractères</p>
+              <p className="text-xs text-gray-500 pt-0.5">Minimum 6 caractères</p>
             )}
           </div>
         </CardContent>
 
-        <CardFooter className="flex flex-col space-y-4">
+        <CardFooter className="flex flex-col gap-3 pt-6">
           <Button
             type="submit"
-            className="w-full bg-[#0056B3] hover:bg-[#00449E]"
+            className="w-full h-11 bg-[#0056B3] hover:bg-[#00449E]"
             disabled={loading}
           >
             {loading ? 'Chargement...' : signUpMode ? 'Créer un compte' : 'Se connecter'}
@@ -207,7 +197,7 @@ if (data.user) {
           <Button
             type="button"
             variant="ghost"
-            className="w-full text-sm"
+            className="w-full text-sm h-9"
             onClick={() => setIsSignUp(!signUpMode)}
             disabled={loading}
           >
