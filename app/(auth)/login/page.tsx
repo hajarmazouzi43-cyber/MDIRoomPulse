@@ -78,9 +78,21 @@ if (data.user) {
             await notifyAdminOfNewUser(data.user.email, data.user.id)
           }
         }
-        
-        toast.success('✅ Compte créé ! Un email a été envoyé à l\'administrateur pour validation.')
-        router.push('/login?waiting=true')
+
+        if (data.session) {
+          // La confirmation par email est désactivée côté Supabase : l'utilisateur
+          // dispose déjà d'une session active. On l'envoie donc directement vers la
+          // page de consentement (sinon elle n'est jamais affichée, car on ne passe
+          // dans ce cas jamais par le lien de confirmation qui pointe vers /consent).
+          toast.success('✅ Compte créé ! Merci de renseigner vos préférences de notification.')
+          router.push('/consent')
+        } else {
+          // La confirmation par email est activée : l'utilisateur devra cliquer sur le
+          // lien reçu par email, qui le redirigera automatiquement vers /consent
+          // (voir emailRedirectTo ci-dessus).
+          toast.success('✅ Compte créé ! Un email a été envoyé à l\'administrateur pour validation.')
+          router.push('/login?waiting=true')
+        }
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
@@ -101,17 +113,12 @@ if (data.user) {
         if (data.user) {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('role, is_verified, email_consent_granted, whatsapp_consent_granted, consent_granted_at')
+            .select('role, is_verified')
             .eq('id', data.user.id)
             .single()
           
           role = profile?.role || 'user'
           isVerified = profile?.is_verified || false
-          // Premier login (ou consentement jamais demandé) : on redirige vers
-          // /consent avant le dashboard, au lieu de laisser cette page
-          // n'être jointe que par le lien de confirmation email — qui n'est
-          // pas notre flux réel (vérification manuelle par l'admin).
-          const needsConsent = !profile?.consent_granted_at
           
           if (!profile) {
             await supabase
@@ -138,11 +145,7 @@ if (data.user) {
           toast.success('Bienvenue !')
         }
 
-        if (needsConsent) {
-          router.push('/consent')
-        } else {
-          router.push('/dashboard')
-        }
+        router.push('/dashboard')
       }
     } catch (error: any) {
       toast.error(error.message || 'Une erreur est survenue')

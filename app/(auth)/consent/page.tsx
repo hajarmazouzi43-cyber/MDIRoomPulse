@@ -99,10 +99,29 @@ export default function ConsentPage() {
           })
       }
 
+      // On vérifie si le compte a déjà été validé par un administrateur avant
+      // d'envoyer l'utilisateur vers le dashboard (même logique que login/page.tsx).
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, is_verified')
+        .eq('id', user.id)
+        .single()
+
+      const role = profile?.role || 'user'
+      const isVerified = profile?.is_verified || false
+
+      if (role !== 'admin' && !isVerified) {
+        toast.success('Merci ! Vos préférences ont été enregistrées.')
+        toast.info('⏳ Votre compte est en attente de validation par un administrateur.')
+        await supabase.auth.signOut()
+        router.push('/login?waiting=true')
+        return
+      }
+
       toast.success('Merci ! Vos préférences ont été enregistrées.')
       router.push('/dashboard')
     } catch (error: any) {
-      toast.error(error.message || "Erreur lors de l'enregistrement des préférences")
+      toast.error(error.message || 'Erreur lors de l\'enregistrement des préférences')
     } finally {
       setLoading(false)
     }
@@ -116,7 +135,7 @@ export default function ConsentPage() {
              Préférences de notification
           </CardTitle>
           <CardDescription className="text-center">
-            Merci d'accorder votre consentement pour recevoir des notifications
+            Merci de donner votre consentement pour recevoir des notifications
           </CardDescription>
         </CardHeader>
 
@@ -124,8 +143,8 @@ export default function ConsentPage() {
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
             <h3 className="font-semibold text-blue-800">Pourquoi avons-nous besoin de votre consentement ?</h3>
             <p className="text-sm text-blue-700 mt-1">
-              MDI RoomPulse envoie des notifications lorsque des salles deviennent disponibles.
-              Nous respectons votre vie privée et n'enverrons que les notifications que vous avez explicitement acceptées.
+              MDI RoomPulse envoie des notifications lorsque des salles se libèrent.
+              Nous respectons votre vie privée et ne vous enverrons que les notifications que vous avez explicitement acceptées.
             </p>
           </div>
 
@@ -150,10 +169,10 @@ export default function ConsentPage() {
                    Notifications par email
                 </Label>
                 <p className="text-sm text-gray-500">
-                  Recevez une notification par email lorsque des salles deviennent disponibles
+                  Recevez une notification par email dès qu'une salle se libère
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
-                  Nous ne vous enverrons que les mises à jour pertinentes sur la disponibilité des salles
+                  Nous vous enverrons uniquement les mises à jour pertinentes sur la disponibilité des salles
                 </p>
               </div>
             </div>
@@ -170,11 +189,11 @@ export default function ConsentPage() {
                   💬 Notifications WhatsApp
                 </Label>
                 <p className="text-sm text-gray-500">
-                  Recevez une notification par WhatsApp lorsque des salles deviennent disponibles
+                  Recevez une notification par WhatsApp dès qu'une salle se libère
                 </p>
                 {!phoneNumber && (
                   <p className="text-xs text-red-500 mt-1">
-                     Vous n'avez pas encore ajouté de numéro WhatsApp. Vous pouvez l'ajouter dans votre profil.
+                     Vous n'avez pas encore ajouté de numéro WhatsApp. Vous pouvez l'ajouter depuis votre profil.
                   </p>
                 )}
               </div>
@@ -182,14 +201,14 @@ export default function ConsentPage() {
           </div>
 
           <div className="bg-gray-50 p-4 rounded-lg border text-sm text-gray-600">
-            <p className="font-medium">Ce à quoi vous consentez :</p>
+            <p className="font-medium"> Ce à quoi vous consentez :</p>
             <ul className="list-disc list-inside mt-2 space-y-1">
               <li>Recevoir des notifications sur la disponibilité des salles</li>
               <li>Recevoir des alertes lorsque toutes les salles sont occupées</li>
-              <li>Des notifications personnalisées pour les salles suivies</li>
+              <li>Notifications personnalisées pour les salles suivies</li>
             </ul>
             <p className="mt-2 text-xs text-gray-500">
-              Vous pouvez modifier ces préférences à tout moment dans les paramètres de votre profil.
+              Vous pouvez modifier ces préférences à tout moment depuis votre profil.
               Nous ne partageons jamais vos données avec des tiers.
             </p>
           </div>
@@ -201,7 +220,7 @@ export default function ConsentPage() {
             disabled={loading || (!emailConsent && !whatsappConsent)}
             className="w-full bg-[#0056B3] hover:bg-[#00449E]"
           >
-            {loading ? 'Enregistrement...' : 'Enregistrer les préférences'}
+            {loading ? 'Enregistrement...' : 'Enregistrer mes préférences'}
           </Button>
           {!emailConsent && !whatsappConsent && (
             <p className="text-xs text-red-500 text-center">
