@@ -301,16 +301,22 @@ export default function DashboardPage() {
         formData.end_time > nowTime
       ) {
         const endDateTime = new Date(`${formData.booking_date}T${formData.end_time}:00`)
-        await supabase
+        const { error: occupyError } = await supabase
           .from('rooms')
           .update({
             is_occupied: true,
             occupied_by: user.id,
-            occupied_at: now.toISOString(),
             occupied_until: endDateTime.toISOString(),
             current_people: 1
           })
           .eq('id', formData.room_id)
+
+        if (occupyError) {
+          // On ne bloque pas la réservation pour autant (elle est déjà
+          // créée avec succès) — mais on logue l'erreur au lieu de la
+          // laisser passer silencieusement, comme c'était le cas avant.
+          console.error('❌ Erreur mise à jour is_occupied (réservation immédiate):', occupyError)
+        }
       }
 
       setIsModalOpen(false)
