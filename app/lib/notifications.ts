@@ -27,6 +27,8 @@ export async function getActiveOrUpcomingBookings(
   const now = new Date()
   const todayStr = getLocalDateString(now)
 
+  console.log('🔍 DEBUG getActiveOrUpcomingBookings:', { roomId, todayStr, now: now.toString() })
+
   // ✅ Supprimer la condition sur 'status' si la colonne n'existe pas
   let query = supabase
     .from('bookings')
@@ -46,6 +48,8 @@ export async function getActiveOrUpcomingBookings(
   }
 
   const { data, error } = await query
+
+  console.log('🔍 DEBUG résultat requête:', { data, error })
 
   if (error) {
     console.error('❌ Erreur requête bookings:', error)
