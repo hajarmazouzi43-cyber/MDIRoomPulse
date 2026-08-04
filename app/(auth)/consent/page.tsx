@@ -54,7 +54,7 @@ export default function ConsentPage() {
 
   const handleSubmit = async () => {
     if (!emailConsent && !whatsappConsent) {
-      toast.warning('Please grant at least one consent to continue')
+      toast.warning('Veuillez accorder au moins un consentement pour continuer')
       return
     }
 
@@ -99,10 +99,10 @@ export default function ConsentPage() {
           })
       }
 
-      toast.success('Thank you! Your preferences have been saved.')
+      toast.success('Merci ! Vos préférences ont été enregistrées.')
       router.push('/dashboard')
     } catch (error: any) {
-      toast.error(error.message || 'Error saving preferences')
+      toast.error(error.message || "Erreur lors de l'enregistrement des préférences")
     } finally {
       setLoading(false)
     }
@@ -113,26 +113,26 @@ export default function ConsentPage() {
       <Card className="w-full max-w-lg">
         <CardHeader>
           <CardTitle className="text-2xl text-[#0056B3] text-center">
-             Notification Preferences
+             Préférences de notification
           </CardTitle>
           <CardDescription className="text-center">
-            Please grant consent to receive notifications
+            Merci d'accorder votre consentement pour recevoir des notifications
           </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-6">
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-            <h3 className="font-semibold text-blue-800">Why we need your consent?</h3>
+            <h3 className="font-semibold text-blue-800">Pourquoi avons-nous besoin de votre consentement ?</h3>
             <p className="text-sm text-blue-700 mt-1">
-              MDI RoomPulse sends notifications when rooms become available.
-              We respect your privacy and will only send notifications you explicitly agree to receive.
+              MDI RoomPulse envoie des notifications lorsque des salles deviennent disponibles.
+              Nous respectons votre vie privée et n'enverrons que les notifications que vous avez explicitement acceptées.
             </p>
           </div>
 
           {phoneNumber && (
             <div className="bg-green-50 p-3 rounded-lg border border-green-200">
               <p className="text-sm text-green-700">
-                 WhatsApp number saved: <strong>{phoneNumber}</strong>
+                 Numéro WhatsApp enregistré : <strong>{phoneNumber}</strong>
               </p>
             </div>
           )}
@@ -147,13 +147,13 @@ export default function ConsentPage() {
               />
               <div>
                 <Label htmlFor="email-consent" className="font-semibold">
-                   Email Notifications
+                   Notifications par email
                 </Label>
                 <p className="text-sm text-gray-500">
-                  Receive notifications by email when rooms become available
+                  Recevez une notification par email lorsque des salles deviennent disponibles
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
-                  We'll only send you relevant room availability updates
+                  Nous ne vous enverrons que les mises à jour pertinentes sur la disponibilité des salles
                 </p>
               </div>
             </div>
@@ -167,14 +167,14 @@ export default function ConsentPage() {
               />
               <div>
                 <Label htmlFor="whatsapp-consent" className="font-semibold">
-                  💬 WhatsApp Notifications
+                  💬 Notifications WhatsApp
                 </Label>
                 <p className="text-sm text-gray-500">
-                  Receive notifications by WhatsApp when rooms become available
+                  Recevez une notification par WhatsApp lorsque des salles deviennent disponibles
                 </p>
                 {!phoneNumber && (
                   <p className="text-xs text-red-500 mt-1">
-                     You haven't added a WhatsApp number yet. You can add it in your profile.
+                     Vous n'avez pas encore ajouté de numéro WhatsApp. Vous pouvez l'ajouter dans votre profil.
                   </p>
                 )}
               </div>
@@ -182,15 +182,15 @@ export default function ConsentPage() {
           </div>
 
           <div className="bg-gray-50 p-4 rounded-lg border text-sm text-gray-600">
-            <p className="font-medium"> What you agree to:</p>
+            <p className="font-medium">Ce à quoi vous consentez :</p>
             <ul className="list-disc list-inside mt-2 space-y-1">
-              <li>Receive notifications about room availability</li>
-              <li>Receive alerts when all rooms are occupied</li>
-              <li>Custom notifications for subscribed rooms</li>
+              <li>Recevoir des notifications sur la disponibilité des salles</li>
+              <li>Recevoir des alertes lorsque toutes les salles sont occupées</li>
+              <li>Des notifications personnalisées pour les salles suivies</li>
             </ul>
             <p className="mt-2 text-xs text-gray-500">
-              You can change these preferences anytime in your Profile settings.
-              We never share your data with third parties.
+              Vous pouvez modifier ces préférences à tout moment dans les paramètres de votre profil.
+              Nous ne partageons jamais vos données avec des tiers.
             </p>
           </div>
         </CardContent>
@@ -201,11 +201,11 @@ export default function ConsentPage() {
             disabled={loading || (!emailConsent && !whatsappConsent)}
             className="w-full bg-[#0056B3] hover:bg-[#00449E]"
           >
-            {loading ? 'Saving...' : 'Save Preferences'}
+            {loading ? 'Enregistrement...' : 'Enregistrer les préférences'}
           </Button>
           {!emailConsent && !whatsappConsent && (
             <p className="text-xs text-red-500 text-center">
-              You must grant at least one consent to continue
+              Vous devez accorder au moins un consentement pour continuer
             </p>
           )}
         </CardFooter>

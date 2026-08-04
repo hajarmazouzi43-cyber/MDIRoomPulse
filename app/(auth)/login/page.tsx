@@ -101,12 +101,17 @@ if (data.user) {
         if (data.user) {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('role, is_verified')
+            .select('role, is_verified, email_consent_granted, whatsapp_consent_granted, consent_granted_at')
             .eq('id', data.user.id)
             .single()
           
           role = profile?.role || 'user'
           isVerified = profile?.is_verified || false
+          // Premier login (ou consentement jamais demandé) : on redirige vers
+          // /consent avant le dashboard, au lieu de laisser cette page
+          // n'être jointe que par le lien de confirmation email — qui n'est
+          // pas notre flux réel (vérification manuelle par l'admin).
+          const needsConsent = !profile?.consent_granted_at
           
           if (!profile) {
             await supabase
@@ -133,7 +138,11 @@ if (data.user) {
           toast.success('Bienvenue !')
         }
 
-        router.push('/dashboard')
+        if (needsConsent) {
+          router.push('/consent')
+        } else {
+          router.push('/dashboard')
+        }
       }
     } catch (error: any) {
       toast.error(error.message || 'Une erreur est survenue')
