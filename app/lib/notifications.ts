@@ -27,8 +27,6 @@ export async function getActiveOrUpcomingBookings(
   const now = new Date()
   const todayStr = getLocalDateString(now)
 
-  console.log('🔍 DEBUG getActiveOrUpcomingBookings:', { roomId, todayStr, now: now.toString() })
-
   // ✅ Supprimer la condition sur 'status' si la colonne n'existe pas
   let query = supabase
     .from('bookings')
@@ -49,8 +47,6 @@ export async function getActiveOrUpcomingBookings(
 
   const { data, error } = await query
 
-  console.log('🔍 DEBUG résultat requête:', { data, error })
-
   if (error) {
     console.error('❌ Erreur requête bookings:', error)
     return []
@@ -58,7 +54,12 @@ export async function getActiveOrUpcomingBookings(
 
   return (data || []).filter((b: any) => {
     if (b.booking_date > todayStr) return true
-    const endDateTime = new Date(`${b.booking_date}T${b.end_time}:00`)
+    // b.end_time contient déjà les secondes (ex: "12:00:00") — ajouter
+    // ":00" en plus créait une date invalide ("...T12:00:00:00"), ce qui
+    // rendait CETTE comparaison toujours fausse et excluait silencieusement
+    // absolument toutes les réservations, peu importe l'heure réelle.
+    const endTimeStr = b.end_time.length === 5 ? `${b.end_time}:00` : b.end_time
+    const endDateTime = new Date(`${b.booking_date}T${endTimeStr}`)
     return endDateTime > now
   })
 }
