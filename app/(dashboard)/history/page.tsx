@@ -83,6 +83,17 @@ export default function HistoryPage() {
   const supabase = createClient()
   const { t } = useLanguage()
 
+  // ✅ Fonction helper pour les traductions avec variables
+  const tWithVars = (key: string, vars?: Record<string, string | number>): string => {
+    let message = t(key)
+    if (vars) {
+      for (const [k, v] of Object.entries(vars)) {
+        message = message.replace(new RegExp(`{{${k}}}`, 'g'), String(v))
+      }
+    }
+    return message
+  }
+
   useEffect(() => {
     fetchData()
   }, [])
@@ -341,9 +352,9 @@ export default function HistoryPage() {
       const activeRoomName = filterRoomId === 'all' ? null : roomOptions.find(r => r.id === filterRoomId)?.name
       const periodLabel = filterPeriod === 'today' ? t('history.periodToday') : filterPeriod === 'week' ? t('history.periodWeek') : null
       const parts = [
-        activeRoomName ? `${t('history.roomFilter', { name: activeRoomName })}` : null,
-        periodLabel ? `${t('history.periodFilter', { period: periodLabel })}` : null,
-        filterUser.trim() ? `${t('history.userFilter', { name: filterUser.trim() })}` : null
+        activeRoomName ? tWithVars('history.roomFilter', { name: activeRoomName }) : null,
+        periodLabel ? tWithVars('history.periodFilter', { period: periodLabel }) : null,
+        filterUser.trim() ? tWithVars('history.userFilter', { name: filterUser.trim() }) : null
       ].filter(Boolean)
       doc.setFontSize(9)
       doc.setTextColor(150, 100, 20)

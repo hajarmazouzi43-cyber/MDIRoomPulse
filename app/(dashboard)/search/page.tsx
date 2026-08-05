@@ -43,6 +43,17 @@ export default function SearchPage() {
   const supabase = createClient()
   const { t } = useLanguage()
 
+  // ✅ Fonction helper pour les traductions avec variables
+  const tWithVars = (key: string, vars?: Record<string, string | number>): string => {
+    let message = t(key)
+    if (vars) {
+      for (const [k, v] of Object.entries(vars)) {
+        message = message.replace(new RegExp(`{{${k}}}`, 'g'), String(v))
+      }
+    }
+    return message
+  }
+
   useEffect(() => {
     fetchData()
   }, [])
@@ -192,8 +203,8 @@ export default function SearchPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
-                    <p className="text-sm text-gray-600">{t('search.capacity', { capacity: room.capacity })}</p>
-                    {room.location && <p className="text-sm text-gray-600">{t('search.location', { location: room.location })}</p>}
+                    <p className="text-sm text-gray-600">{tWithVars('search.capacity', { capacity: room.capacity })}</p>
+                    {room.location && <p className="text-sm text-gray-600">{tWithVars('search.location', { location: room.location })}</p>}
                     {room.equipment && room.equipment.length > 0 && (
                       <div className="flex flex-wrap gap-1">
                         {room.equipment.slice(0, 3).map((item) => (

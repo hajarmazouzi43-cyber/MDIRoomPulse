@@ -114,10 +114,9 @@ export default function Sidebar({
 
       {/* Footer */}
       <div className="border-t border-gray-200 dark:border-[#334155] p-2 space-y-2">
-        <LanguageSwitcher
-          collapsed={collapsed}
-          className="w-full text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#1e293b]"
-        />
+        <div className={`flex ${collapsed ? 'justify-center' : 'justify-start'} w-full`}>
+          <LanguageSwitcher />
+        </div>
         <Button
           variant="ghost"
           size="sm"

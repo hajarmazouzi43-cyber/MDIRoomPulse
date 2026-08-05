@@ -22,6 +22,17 @@ export default function CalendarPage() {
   const supabase = createClient()
   const { t } = useLanguage()
 
+  // ✅ Fonction helper pour les traductions avec variables
+  const tWithVars = (key: string, vars?: Record<string, string | number>): string => {
+    let message = t(key)
+    if (vars) {
+      for (const [k, v] of Object.entries(vars)) {
+        message = message.replace(new RegExp(`{{${k}}}`, 'g'), String(v))
+      }
+    }
+    return message
+  }
+
   useEffect(() => {
     fetchData()
   }, [])
@@ -34,11 +45,11 @@ export default function CalendarPage() {
       const calendarEvents = roomsData
         .filter((r: any) => r.is_occupied && r.occupied_at)
         .map((r: any) => ({
-          title: `${t('calendar.room', { name: r.name })}`,
+          title: tWithVars('calendar.room', { name: r.name }),
           start: r.occupied_at,
           end: r.occupied_until || new Date(Date.now() + 3600000).toISOString(),
           location: r.location || 'N/A',
-          description: t('calendar.description', { capacity: r.capacity, current: r.current_people || 0 }),
+          description: tWithVars('calendar.description', { capacity: r.capacity, current: r.current_people || 0 }),
         }))
       setEvents(calendarEvents)
     }

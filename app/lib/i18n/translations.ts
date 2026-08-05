@@ -49,7 +49,7 @@ export const translations = {
         cta: 'Créer un compte gratuitement',
       },
       footer: {
-        text: '© 2026 MDI RoomPulse — ENSA Berrechid',
+        text: '© 2026 MDI RoomPulse ',
       },
     },
     common: {
@@ -595,7 +595,7 @@ export const translations = {
         cta: 'Create a free account',
       },
       footer: {
-        text: '© 2026 MDI RoomPulse — ENSA Berrechid',
+        text: '© 2026 MDI RoomPulse ',
       },
     },
     common: {

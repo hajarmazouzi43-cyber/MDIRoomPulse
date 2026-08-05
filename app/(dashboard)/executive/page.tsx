@@ -12,6 +12,17 @@ export default function ExecutivePage() {
   const supabase = createClient()
   const { t } = useLanguage()
 
+  // ✅ Fonction helper pour les traductions avec variables
+  const tWithVars = (key: string, vars?: Record<string, string | number>): string => {
+    let message = t(key)
+    if (vars) {
+      for (const [k, v] of Object.entries(vars)) {
+        message = message.replace(new RegExp(`{{${k}}}`, 'g'), String(v))
+      }
+    }
+    return message
+  }
+
   useEffect(() => {
     fetchRooms()
     
@@ -79,9 +90,9 @@ export default function ExecutivePage() {
                   </Badge>
                 </div>
                 <div className="mt-2 text-gray-300 text-sm">
-                  <p>{t('executive.people', { current: room.current_people || 0, max: room.max_people || room.capacity || 1 })}</p>
+                  <p>{tWithVars('executive.people', { current: room.current_people || 0, max: room.max_people || room.capacity || 1 })}</p>
                   {room.occupied_until && (
-                    <p>{t('executive.time', { time: new Date(room.occupied_until).toLocaleTimeString() })}</p>
+                    <p>{tWithVars('executive.time', { time: new Date(room.occupied_until).toLocaleTimeString() })}</p>
                   )}
                 </div>
               </CardContent>

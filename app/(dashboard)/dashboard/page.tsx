@@ -78,6 +78,17 @@ export default function DashboardPage() {
   const dateInputRef = useRef<HTMLInputElement>(null)
   const touchStartX = useRef<number | null>(null)
 
+  // ✅ Fonction helper pour les traductions avec variables
+  const tWithVars = (key: string, vars?: Record<string, string | number>): string => {
+    let message = t(key)
+    if (vars) {
+      for (const [k, v] of Object.entries(vars)) {
+        message = message.replace(new RegExp(`{{${k}}}`, 'g'), String(v))
+      }
+    }
+    return message
+  }
+
   // Ouvre le sélecteur de date natif (permet de sauter directement à un mois/année)
   const openDatePicker = () => {
     const el = dateInputRef.current
@@ -233,7 +244,7 @@ export default function DashboardPage() {
     )
 
     if (existing) {
-      toast.info(t('dashboard.alreadyBooked', { title: existing.title }))
+      toast.info(tWithVars('dashboard.alreadyBooked', { title: existing.title }))
       return
     }
 
@@ -287,7 +298,7 @@ export default function DashboardPage() {
       })
 
     if (error) {
-      toast.error(t('dashboard.bookingError', { message: error.message }))
+      toast.error(tWithVars('dashboard.bookingError', { message: error.message }))
     } else {
       toast.success(t('dashboard.bookingSuccess'))
 
@@ -314,9 +325,6 @@ export default function DashboardPage() {
           .eq('id', formData.room_id)
 
         if (occupyError) {
-          // On ne bloque pas la réservation pour autant (elle est déjà
-          // créée avec succès) — mais on logue l'erreur au lieu de la
-          // laisser passer silencieusement, comme c'était le cas avant.
           console.error('❌ Erreur mise à jour is_occupied (réservation immédiate):', occupyError)
         }
       }
@@ -649,7 +657,7 @@ export default function DashboardPage() {
                       `}
                       onClick={() => {
                         setFormData({ ...formData, room_id: room.id })
-                        toast.success(t('dashboard.roomSelected', { name: room.name }))
+                        toast.success(tWithVars('dashboard.roomSelected', { name: room.name }))
                       }}
                     >
                       <div className="flex justify-between items-center">

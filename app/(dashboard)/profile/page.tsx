@@ -21,6 +21,17 @@ export default function ProfilePage() {
   const supabase = createClient()
   const { t } = useLanguage()
 
+  // ✅ Fonction helper pour les traductions avec variables (si besoin)
+  const tWithVars = (key: string, vars?: Record<string, string | number>): string => {
+    let message = t(key)
+    if (vars) {
+      for (const [k, v] of Object.entries(vars)) {
+        message = message.replace(new RegExp(`{{${k}}}`, 'g'), String(v))
+      }
+    }
+    return message
+  }
+
   useEffect(() => {
     async function loadProfile() {
       const { data: { user } } = await supabase.auth.getUser()

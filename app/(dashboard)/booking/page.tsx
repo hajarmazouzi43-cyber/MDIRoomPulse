@@ -1,3 +1,4 @@
+// app/(dashboard)/booking/page.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -35,6 +36,17 @@ export default function BookingPage() {
   const [user, setUser] = useState<any>(null)
   const supabase = createClient()
   const { t } = useLanguage()
+
+  // ✅ Fonction helper pour les traductions avec variables
+  const tWithVars = (key: string, vars?: Record<string, string | number>): string => {
+    let message = t(key)
+    if (vars) {
+      for (const [k, v] of Object.entries(vars)) {
+        message = message.replace(new RegExp(`{{${k}}}`, 'g'), String(v))
+      }
+    }
+    return message
+  }
 
   const [newBooking, setNewBooking] = useState({
     title: '',
@@ -134,7 +146,7 @@ export default function BookingPage() {
   }
 
   const handleBookingDelete = async (bookingId: string) => {
-    if (!confirm(t('booking.deleteConfirm'))) return
+    if (!confirm(tWithVars('booking.deleteConfirm', { title: 'cette réservation', room: 'salle' }))) return
     const { error } = await supabase
       .from('bookings')
       .delete()
@@ -195,7 +207,7 @@ export default function BookingPage() {
               .filter(b => !selectedRoom || b.room_id === selectedRoom)
               .map(b => ({
                 id: b.id,
-                title: t('booking.eventTitle', { room: b.room_name, title: b.title }),
+                title: tWithVars('booking.eventTitle', { room: b.room_name, title: b.title }),
                 start: `${b.booking_date}T${b.start_time}`,
                 end: `${b.booking_date}T${b.end_time}`,
                 extendedProps: { booking: b }
@@ -203,7 +215,7 @@ export default function BookingPage() {
             }
             eventClick={(info) => {
               const booking = info.event.extendedProps.booking
-              if (confirm(t('booking.deleteConfirm', { title: booking.title, room: booking.room_name }))) {
+              if (confirm(tWithVars('booking.deleteConfirm', { title: booking.title, room: booking.room_name }))) {
                 handleBookingDelete(booking.id)
               }
             }}

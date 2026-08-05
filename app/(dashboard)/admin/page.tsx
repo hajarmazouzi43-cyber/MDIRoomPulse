@@ -73,6 +73,17 @@ export default function AdminPage() {
     out_of_service_reason: ''
   })
 
+  // Fonction helper pour les traductions avec variables
+  const tWithVars = (key: string, vars?: Record<string, string | number>): string => {
+    let message = t(key)
+    if (vars) {
+      for (const [k, v] of Object.entries(vars)) {
+        message = message.replace(new RegExp(`{{${k}}}`, 'g'), String(v))
+      }
+    }
+    return message
+  }
+
   // Vérifier le code admin et mettre à jour le rôle
   const verifyAdminCode = async () => {
     if (adminCode === 'ADMINatrsd2647') {
@@ -170,12 +181,12 @@ export default function AdminPage() {
 
         if (!error && !wasOutOfService && isNowOutOfService) {
           const result = await notifyRoomOutOfService(editingRoom.id, data.out_of_service_reason || 'Maintenance')
-          toast.success(t('admin.subscribersNotified', { count: result.email + result.sms }))
+          toast.success(tWithVars('admin.subscribersNotified', { count: result.email + result.sms }))
         }
 
         if (!error && wasOutOfService && !isNowOutOfService) {
           const result = await notifyRoomStatusChange(editingRoom.id, 'back_in_service')
-          toast.success(t('admin.subscribersNotified', { count: result.email + result.sms }))
+          toast.success(tWithVars('admin.subscribersNotified', { count: result.email + result.sms }))
         }
 
       } else {
@@ -224,7 +235,7 @@ export default function AdminPage() {
   }
 
   const handleForceRelease = async (room: any) => {
-    if (!confirm(t('admin.forceReleaseConfirm', { room: room.name }))) return
+    if (!confirm(tWithVars('admin.forceReleaseConfirm', { room: room.name }))) return
 
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -262,7 +273,7 @@ export default function AdminPage() {
         const result = await notifyRoomStatusChange(room.id, 'free')
 
         if (result.email > 0 || result.sms > 0) {
-          toast.success(t('admin.subscribersNotified', { count: result.email + result.sms }))
+          toast.success(tWithVars('admin.subscribersNotified', { count: result.email + result.sms }))
         }
 
         let notifiedCount = 0
@@ -286,7 +297,7 @@ export default function AdminPage() {
         }
 
         if (notifiedCount > 0) {
-          toast.success(t('admin.bookersNotified', { count: bookings.length }))
+          toast.success(tWithVars('admin.bookersNotified', { count: bookings.length }))
         }
       }
 
@@ -301,7 +312,7 @@ export default function AdminPage() {
         }
       })
 
-      toast.success(t('admin.forceReleaseSuccess', { room: room.name }) + (bookings?.length ? ` (${bookings.length} ${t('admin.bookingCancelled')})` : ''))
+      toast.success(tWithVars('admin.forceReleaseSuccess', { room: room.name }) + (bookings?.length ? ` (${bookings.length} ${t('admin.bookingCancelled')})` : ''))
       fetchData()
     } catch (error: any) {
       console.error('Erreur force release:', error)
@@ -318,7 +329,7 @@ export default function AdminPage() {
     if (error) {
       toast.error(t('admin.roleUpdateError'))
     } else {
-      toast.success(t('admin.roleUpdateSuccess', { role: newRole }))
+      toast.success(tWithVars('admin.roleUpdateSuccess', { role: newRole }))
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u))
     }
   }
@@ -393,7 +404,7 @@ export default function AdminPage() {
         })
       }
 
-      toast.success(isVerified ? t('admin.userDeactivated') : t('admin.userVerified', { email: userEmail }))
+      toast.success(isVerified ? t('admin.userDeactivated') : tWithVars('admin.userVerified', { email: userEmail }))
       fetchData()
     } catch (error) {
       toast.error(t('admin.verificationError'))

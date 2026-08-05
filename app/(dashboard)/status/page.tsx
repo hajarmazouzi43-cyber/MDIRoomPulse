@@ -15,6 +15,17 @@ export default function StatusPage() {
   const supabase = createClient()
   const { t } = useLanguage()
 
+  // ✅ Fonction helper pour les traductions avec variables
+  const tWithVars = (key: string, vars?: Record<string, string | number>): string => {
+    let message = t(key)
+    if (vars) {
+      for (const [k, v] of Object.entries(vars)) {
+        message = message.replace(new RegExp(`{{${k}}}`, 'g'), String(v))
+      }
+    }
+    return message
+  }
+
   useEffect(() => {
     getUser()
   }, [])
@@ -38,7 +49,11 @@ export default function StatusPage() {
       
       if (result.success) {
         setResponse(result.response || '')
-        toast.success(t('status.success', { free: result.free, occupied: result.occupied }))
+        // ✅ Correction : ajouter des valeurs par défaut pour éviter undefined
+        toast.success(tWithVars('status.success', { 
+          free: result.free || 0, 
+          occupied: result.occupied || 0 
+        }))
       } else {
         toast.error(t('status.error'))
       }

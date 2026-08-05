@@ -177,7 +177,7 @@ export default function ReportPDF({ rooms, history, stats }: ReportPDFProps) {
       doc.setFontSize(8)
       doc.setTextColor('#999')
       doc.text(`Generated on ${new Date().toLocaleString()}`, pageWidth / 2, y + 13, { align: 'center' })
-      doc.text('© 2026 MDI RoomPulse - ENSA Berrechid', pageWidth / 2, y + 18, { align: 'center' })
+      doc.text('© 2026 MDI RoomPulse', pageWidth / 2, y + 18, { align: 'center' })
 
       doc.save(`report-${new Date().toISOString().split('T')[0]}.pdf`)
       toast.success('PDF downloaded successfully!')

@@ -25,7 +25,6 @@ import {
   Search,
   X,
   Timer,
-  Radio,
   PartyPopper,
 } from 'lucide-react'
 
@@ -147,15 +146,15 @@ function burstConfetti(x: number, y: number) {
   setTimeout(() => container.remove(), 800)
 }
 
-function formatRemaining(until: string | null, now: Date, t: (key: string, vars?: Record<string, string | number>) => string): string | null {
+function formatRemaining(until: string | null, now: Date, t: (key: string) => string): string | null {
   if (!until) return null
   const end = new Date(until).getTime()
   const diff = end - now.getTime()
   if (diff <= 0) return t('rooms.finished')
   const h = Math.floor(diff / 3_600_000)
   const m = Math.floor((diff % 3_600_000) / 60_000)
-  if (h > 0) return t('rooms.remainingHours', { h, m })
-  return t('rooms.remainingMinutes', { m })
+  if (h > 0) return `${h}h ${m}m`
+  return `${m}m`
 }
 
 export default function RoomsPage() {
@@ -269,7 +268,7 @@ export default function RoomsPage() {
     const currentPeople = room.current_people || 0
 
     if (currentPeople >= maxPeople) {
-      toast.error(t('rooms.roomFull', { current: currentPeople, max: maxPeople }))
+      toast.error(`${t('rooms.roomFull')} (${currentPeople}/${maxPeople})`)
       return
     }
 
@@ -293,7 +292,7 @@ export default function RoomsPage() {
       .gt('end_time', startTime)
 
     if (conflicts && conflicts.length > 0) {
-      toast.error(t('rooms.slotAlreadyBookedCalendar', { title: conflicts[0].title }))
+      toast.error(`${t('rooms.slotAlreadyBookedCalendar')}: ${conflicts[0].title}`)
       return
     }
 
@@ -327,11 +326,11 @@ export default function RoomsPage() {
         console.error('Erreur de synchronisation avec le calendrier:', bookingError)
       }
 
-      toast.success(t('rooms.occupySuccess', { room: roomName, total: newTotal, max: maxPeople, start: startTime, end: endTime }))
+      toast.success(`${t('rooms.occupySuccess')} ${roomName} (${newTotal}/${maxPeople}) ${t('rooms.from')} ${startTime} ${t('rooms.to')} ${endTime}`)
 
       const result = await notifyRoomStatusChange(roomId, 'occupied')
       if (result.email > 0 || result.sms > 0) {
-        toast.info(t('rooms.subscribersNotified', { count: result.email + result.sms }))
+        toast.info(`${t('rooms.subscribersNotified')} ${result.email + result.sms}`)
       }
 
       fetchRooms()
@@ -374,11 +373,11 @@ export default function RoomsPage() {
     }
 
     if (e) burstConfetti(e.clientX, e.clientY)
-    toast.success(t('rooms.freeSuccess', { room: roomName }))
+    toast.success(`${t('rooms.freeSuccess')} ${roomName}`)
 
     const result = await notifyRoomStatusChange(roomId, 'free')
     if (result.email > 0 || result.sms > 0) {
-      toast.info(t('rooms.subscribersNotified', { count: result.email + result.sms }))
+      toast.info(`${t('rooms.subscribersNotified')} ${result.email + result.sms}`)
     }
 
     fetchRooms()
@@ -392,7 +391,7 @@ export default function RoomsPage() {
       return
     }
 
-    const reason = prompt(t('rooms.outOfServiceReasonPrompt', { room: roomName }))
+    const reason = prompt(`${t('rooms.outOfServiceReasonPrompt')} ${roomName}`)
     if (reason === null) return
     
     if (reason.trim() === '') {
@@ -433,10 +432,10 @@ export default function RoomsPage() {
       const result = await notifyRoomOutOfService(roomId, reason)
       
       if (result.email > 0 || result.sms > 0) {
-        toast.success(t('rooms.cancelledBookingsNotified', { count: result.email + result.sms }))
+        toast.success(`${t('rooms.cancelledBookingsNotified')} ${result.email + result.sms}`)
       }
 
-      toast.success(t('rooms.nowOutOfService', { room: roomName }))
+      toast.success(`${t('rooms.nowOutOfService')} ${roomName}`)
       fetchRooms()
     } catch (error) {
       toast.error(t('rooms.outOfServiceError'))
@@ -478,10 +477,10 @@ export default function RoomsPage() {
       const result = await notifyRoomStatusChange(roomId, 'back_in_service')
       
       if (result.email > 0 || result.sms > 0) {
-        toast.success(t('rooms.subscribersNotified', { count: result.email + result.sms }))
+        toast.success(`${t('rooms.subscribersNotified')} ${result.email + result.sms}`)
       }
 
-      toast.success(t('rooms.nowBackInService', { room: roomName }))
+      toast.success(`${t('rooms.nowBackInService')} ${roomName}`)
       fetchRooms()
     } catch (error) {
       toast.error(t('rooms.backInServiceError'))
@@ -500,7 +499,7 @@ export default function RoomsPage() {
     const result = await askWhoIsFree(user.id, user.email?.split('@')[0] || 'Utilisateur')
 
     if (result.success) {
-      toast.success(t('rooms.whoIsFreeResult', { free: result.free, occupied: result.occupied }))
+      toast.success(`${t('rooms.whoIsFreeResult')}: ${result.free || 0} ${t('rooms.available')}, ${result.occupied || 0} ${t('rooms.occupied')}`)
     } else {
       toast.error(t('rooms.whoIsFreeError'))
     }
