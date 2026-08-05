@@ -4,11 +4,13 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 export default function ExecutivePage() {
   const [rooms, setRooms] = useState<any[]>([])
   const [lastUpdate, setLastUpdate] = useState(new Date())
   const supabase = createClient()
+  const { t } = useLanguage()
 
   useEffect(() => {
     fetchRooms()
@@ -21,11 +23,9 @@ export default function ExecutivePage() {
       })
       .subscribe()
 
-    // ✅ Nettoyer correctement
     return () => {
       supabase.removeChannel(channel)
     }
-  // ✅ Ajouter supabase comme dépendance
   }, [supabase])
 
   const fetchRooms = async () => {
@@ -41,9 +41,9 @@ export default function ExecutivePage() {
     <div className="min-h-screen bg-gray-900 p-8">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-bold text-white">🏢 Executive Dashboard</h1>
+          <h1 className="text-4xl font-bold text-white">{t('executive.title')}</h1>
           <div className="text-gray-400 text-sm">
-            🕐 {lastUpdate.toLocaleTimeString()}
+            🕐 {t('executive.lastUpdate')}: {lastUpdate.toLocaleTimeString()}
           </div>
         </div>
 
@@ -51,19 +51,19 @@ export default function ExecutivePage() {
           <Card className="bg-blue-900/50 border-blue-500">
             <CardContent className="p-6 text-center">
               <p className="text-4xl font-bold text-white">{total}</p>
-              <p className="text-blue-300">Total Rooms</p>
+              <p className="text-blue-300">{t('executive.totalRooms')}</p>
             </CardContent>
           </Card>
           <Card className="bg-green-900/50 border-green-500">
             <CardContent className="p-6 text-center">
               <p className="text-4xl font-bold text-green-400">{free}</p>
-              <p className="text-green-300">Free</p>
+              <p className="text-green-300">{t('executive.free')}</p>
             </CardContent>
           </Card>
           <Card className="bg-red-900/50 border-red-500">
             <CardContent className="p-6 text-center">
               <p className="text-4xl font-bold text-red-400">{occupied}</p>
-              <p className="text-red-300">Occupied</p>
+              <p className="text-red-300">{t('executive.occupied')}</p>
             </CardContent>
           </Card>
         </div>
@@ -75,13 +75,13 @@ export default function ExecutivePage() {
                 <div className="flex justify-between items-start">
                   <h3 className="text-white font-semibold">{room.name}</h3>
                   <Badge className={room.is_occupied ? 'bg-red-500' : 'bg-green-500'}>
-                    {room.is_occupied ? 'Occupied' : 'Free'}
+                    {room.is_occupied ? t('executive.occupied') : t('executive.free')}
                   </Badge>
                 </div>
                 <div className="mt-2 text-gray-300 text-sm">
-                  <p>👥 {room.current_people || 0}/{room.max_people || room.capacity || 1}</p>
+                  <p>{t('executive.people', { current: room.current_people || 0, max: room.max_people || room.capacity || 1 })}</p>
                   {room.occupied_until && (
-                    <p>⏱️ {new Date(room.occupied_until).toLocaleTimeString()}</p>
+                    <p>{t('executive.time', { time: new Date(room.occupied_until).toLocaleTimeString() })}</p>
                   )}
                 </div>
               </CardContent>

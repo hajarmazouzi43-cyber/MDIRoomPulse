@@ -4,6 +4,8 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 import { 
   LayoutDashboard, 
   Building2, 
@@ -37,6 +39,7 @@ export default function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(true)
+  const { t } = useLanguage()
 
   const toggleCollapse = () => {
     const newState = !collapsed
@@ -47,16 +50,16 @@ export default function Sidebar({
   }
 
   const navItems = [
-    { name: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
-    { name: 'Rooms', icon: Building2, href: '/rooms' },
-    { name: 'Floor Plan', icon: Map, href: '/floor-plan' },
-    { name: 'History', icon: History, href: '/history' },
-    { name: 'AI Assistant', icon: Bot, href: '/ai-assistant' },
-    { name: 'Analytics', icon: BarChart3, href: '/analytics' },
+    { name: t('nav.dashboard'), icon: LayoutDashboard, href: '/dashboard' },
+    { name: t('nav.rooms'), icon: Building2, href: '/rooms' },
+    { name: t('nav.floorPlan'), icon: Map, href: '/floor-plan' },
+    { name: t('nav.history'), icon: History, href: '/history' },
+    { name: t('nav.aiAssistant'), icon: Bot, href: '/ai-assistant' },
+    { name: t('nav.analytics'), icon: BarChart3, href: '/analytics' },
     ...(isAdmin ? [
-      { name: 'Admin', icon: Shield, href: '/admin' },
+      { name: t('nav.admin'), icon: Shield, href: '/admin' },
     ] : []),
-    { name: 'Profile', icon: User, href: '/profile' },
+    { name: t('nav.profile'), icon: User, href: '/profile' },
   ]
 
   return (
@@ -71,7 +74,7 @@ export default function Sidebar({
       <div className="flex items-center justify-between h-16 px-3 border-b border-gray-200 dark:border-[#334155]">
         {!collapsed && (
           <Link href="/dashboard" className="text-lg font-bold text-[#0056B3] dark:text-[#00A3E0] truncate">
-            MDI RoomPulse
+            {t('nav.appName')}
           </Link>
         )}
         <Button
@@ -111,6 +114,10 @@ export default function Sidebar({
 
       {/* Footer */}
       <div className="border-t border-gray-200 dark:border-[#334155] p-2 space-y-2">
+        <LanguageSwitcher
+          collapsed={collapsed}
+          className="w-full text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#1e293b]"
+        />
         <Button
           variant="ghost"
           size="sm"
@@ -118,7 +125,7 @@ export default function Sidebar({
           className={`w-full text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#1e293b] ${collapsed ? 'justify-center' : 'justify-start'}`}
         >
           {darkMode ? <Sun size={20} className="shrink-0" /> : <Moon size={20} className="shrink-0" />}
-          {!collapsed && <span className="ml-3 text-sm">{darkMode ? 'Light Mode' : 'Dark Mode'}</span>}
+          {!collapsed && <span className="ml-3 text-sm">{darkMode ? t('nav.lightMode') : t('nav.darkMode')}</span>}
         </Button>
         <Button
           variant="ghost"
@@ -127,7 +134,7 @@ export default function Sidebar({
           className={`w-full text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 ${collapsed ? 'justify-center' : 'justify-start'}`}
         >
           <LogOut size={20} className="shrink-0" />
-          {!collapsed && <span className="ml-3 text-sm">Sign Out</span>}
+          {!collapsed && <span className="ml-3 text-sm">{t('nav.signOut')}</span>}
         </Button>
       </div>
     </aside>

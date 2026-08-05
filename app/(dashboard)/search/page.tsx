@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 interface Room {
   id: string
@@ -40,6 +41,7 @@ export default function SearchPage() {
   const [endTime, setEndTime] = useState('17:00')
   const [hasSearched, setHasSearched] = useState(false)
   const supabase = createClient()
+  const { t } = useLanguage()
 
   useEffect(() => {
     fetchData()
@@ -57,24 +59,21 @@ export default function SearchPage() {
 
   const searchRooms = () => {
     if (!searchDate) {
-      toast.error('Veuillez sélectionner une date')
+      toast.error(t('search.selectDate'))
       return
     }
 
     if (startTime >= endTime) {
-      toast.error('L\'heure de début doit être avant l\'heure de fin')
+      toast.error(t('search.startBeforeEnd'))
       return
     }
 
     setHasSearched(true)
 
-    // Filtrer les salles
     const available = rooms.filter(room => {
-      // Exclure les salles hors service
       if (room.is_out_of_service) return false
       if (room.category === 'detente') return false
 
-      // Vérifier les réservations pour cette date et plage horaire
       const conflicting = bookings.some(b => 
         b.room_id === room.id &&
         b.booking_date === searchDate &&
@@ -88,7 +87,6 @@ export default function SearchPage() {
     setFilteredRooms(available)
   }
 
-  // Réinitialiser la recherche
   const resetSearch = () => {
     setFilteredRooms([])
     setHasSearched(false)
@@ -114,15 +112,14 @@ export default function SearchPage() {
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold text-[#0056B3] dark:text-[#00A3E0] mb-6">
-        🔍 Rechercher une salle
+        {t('search.title')}
       </h1>
 
-      {/* Formulaire de recherche */}
       <Card className="mb-8">
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <Label>Date</Label>
+              <Label>{t('search.date')}</Label>
               <Input
                 type="date"
                 value={searchDate}
@@ -131,7 +128,7 @@ export default function SearchPage() {
               />
             </div>
             <div>
-              <Label>Début</Label>
+              <Label>{t('search.start')}</Label>
               <Input
                 type="time"
                 value={startTime}
@@ -140,7 +137,7 @@ export default function SearchPage() {
               />
             </div>
             <div>
-              <Label>Fin</Label>
+              <Label>{t('search.end')}</Label>
               <Input
                 type="time"
                 value={endTime}
@@ -150,11 +147,11 @@ export default function SearchPage() {
             </div>
             <div className="flex items-end gap-2">
               <Button onClick={searchRooms} className="w-full bg-[#0056B3] hover:bg-[#00449E]">
-                🔍 Rechercher
+                {t('search.search')}
               </Button>
               {hasSearched && (
                 <Button onClick={resetSearch} variant="outline" className="w-full">
-                  ✕
+                  {t('search.reset')}
                 </Button>
               )}
             </div>
@@ -162,20 +159,14 @@ export default function SearchPage() {
         </CardContent>
       </Card>
 
-      {/* Résultats */}
       {hasSearched && (
         <div>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">
-              {filteredRooms.length} salle{filteredRooms.length > 1 ? 's' : ''} disponible{filteredRooms.length > 1 ? 's' : ''}
+              {filteredRooms.length} {filteredRooms.length > 1 ? t('search.resultsPlural') : t('search.results')}
             </h2>
             <span className="text-sm text-gray-500">
               {(() => {
-                // On construit la date "manuellement" (année, mois, jour) au
-                // lieu de faire new Date(searchDate) : cette dernière
-                // interprète une chaîne "YYYY-MM-DD" comme minuit UTC, ce qui
-                // peut afficher la veille selon le fuseau horaire du
-                // navigateur (bug classique de décalage d'un jour).
                 const [y, m, d] = searchDate.split('-').map(Number)
                 return new Date(y, m - 1, d).toLocaleDateString('fr-FR')
               })()} - {startTime} → {endTime}
@@ -185,9 +176,9 @@ export default function SearchPage() {
           {filteredRooms.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center text-gray-500">
-                🏢 Aucune salle disponible pour cet horaire.
+                {t('search.noResults')}
                 <br />
-                <span className="text-sm">Essayez un autre créneau ou une autre date.</span>
+                <span className="text-sm">{t('search.tryOther')}</span>
               </CardContent>
             </Card>
           ) : (
@@ -197,12 +188,12 @@ export default function SearchPage() {
                   <CardHeader className="pb-2">
                     <CardTitle className="flex justify-between items-center">
                       <span>{room.name}</span>
-                      <Badge className="bg-green-500">🟢 Disponible</Badge>
+                      <Badge className="bg-green-500">{t('search.available')}</Badge>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
-                    <p className="text-sm text-gray-600">👥 {room.capacity} personnes</p>
-                    {room.location && <p className="text-sm text-gray-600">📍 {room.location}</p>}
+                    <p className="text-sm text-gray-600">{t('search.capacity', { capacity: room.capacity })}</p>
+                    {room.location && <p className="text-sm text-gray-600">{t('search.location', { location: room.location })}</p>}
                     {room.equipment && room.equipment.length > 0 && (
                       <div className="flex flex-wrap gap-1">
                         {room.equipment.slice(0, 3).map((item) => (
@@ -216,7 +207,7 @@ export default function SearchPage() {
                       className="w-full mt-2 bg-[#0056B3] hover:bg-[#00449E]"
                       onClick={() => window.location.href = `/rooms/${room.id}`}
                     >
-                      Voir la salle
+                      {t('search.viewRoom')}
                     </Button>
                   </CardContent>
                 </Card>
@@ -226,11 +217,10 @@ export default function SearchPage() {
         </div>
       )}
 
-      {/* Message si pas de recherche */}
       {!hasSearched && (
         <Card>
           <CardContent className="py-12 text-center text-gray-500">
-            🗓️ Sélectionnez une date et un créneau horaire pour trouver une salle disponible.
+            {t('search.placeholder')}
           </CardContent>
         </Card>
       )}

@@ -14,8 +14,6 @@ const LanguageContext = createContext<LanguageContextValue | undefined>(undefine
 
 const STORAGE_KEY = 'roompulse-language'
 
-// Va chercher une valeur imbriquée dans le dictionnaire à partir d'une clé
-// pointée, ex: "home.hero.title" -> translations.fr.home.hero.title
 function getNestedValue(obj: any, path: string): string | undefined {
   return path.split('.').reduce((acc, part) => (acc && acc[part] !== undefined ? acc[part] : undefined), obj)
 }
@@ -24,12 +22,12 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>('fr')
   const [hydrated, setHydrated] = useState(false)
 
-  // Lit la préférence sauvegardée une fois le composant monté côté client
-  // (on ne peut pas lire localStorage pendant le rendu serveur).
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY) as Language | null
     if (saved === 'fr' || saved === 'en') {
       setLanguageState(saved)
+      // ✅ Synchroniser avec les cookies pour les Server Components
+      document.cookie = `roompulse-language=${saved}; path=/; max-age=31536000`
     }
     setHydrated(true)
   }, [])
@@ -37,13 +35,13 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const setLanguage = (lang: Language) => {
     setLanguageState(lang)
     localStorage.setItem(STORAGE_KEY, lang)
+    // ✅ Mettre à jour les cookies pour les Server Components
+    document.cookie = `roompulse-language=${lang}; path=/; max-age=31536000`
   }
 
   const t = (key: string): string => {
     const value = getNestedValue(translations[language], key)
     if (value === undefined) {
-      // Repli sur le français si une clé manque dans une langue, puis sur
-      // la clé elle-même — pour ne jamais rien afficher de vide/cassé.
       const fallback = getNestedValue(translations.fr, key)
       if (fallback !== undefined) return fallback as string
       console.warn(`[i18n] Clé de traduction manquante: "${key}"`)
@@ -52,9 +50,6 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     return value as string
   }
 
-  // On évite un flash de contenu mal traduit avant l'hydratation, en gardant
-  // le rendu identique (français par défaut) tant qu'on n'a pas confirmé la
-  // préférence sauvegardée — ceci reste cohérent avec le rendu serveur.
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t }}>
       {children}
@@ -69,3 +64,6 @@ export function useLanguage() {
   }
   return context
 }
+
+// ❌ SUPPRIMER getServerLanguage() d'ici car c'est un Client Component
+// export async function getServerLanguage() { ... }  ← SUPPRIMER

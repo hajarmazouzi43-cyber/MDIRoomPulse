@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts'
 import { Building2, CircleCheck, DoorOpen, CalendarDays, Users, ClipboardList, History, Gauge, BarChart3 } from 'lucide-react'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 export default function AnalyticsPage() {
   const [stats, setStats] = useState({
@@ -21,6 +22,7 @@ export default function AnalyticsPage() {
   const [monthlyData, setMonthlyData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
+  const { t } = useLanguage()
 
   useEffect(() => {
     fetchAnalytics()
@@ -48,7 +50,6 @@ export default function AnalyticsPage() {
       .from('rooms')
       .select('name, current_people, max_people, is_occupied')
 
-    // Données mensuelles (simulées pour l'exemple)
     const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
     const monthlyData = months.map((month, i) => ({
       month,
@@ -88,8 +89,8 @@ export default function AnalyticsPage() {
   }
 
   const pieData = [
-    { name: '🟢 Libres', value: stats.freeRooms, color: '#14B8A6' },
-    { name: '🔴 Occupées', value: stats.occupiedRooms, color: '#FF6F61' },
+    { name: t('analytics.freeRoomsLabel'), value: stats.freeRooms, color: '#14B8A6' },
+    { name: t('analytics.occupiedRoomsLabel'), value: stats.occupiedRooms, color: '#FF6F61' },
   ]
 
   if (loading) {
@@ -106,18 +107,18 @@ export default function AnalyticsPage() {
   }
 
   const topStats = [
-    { label: 'Total salles', value: stats.totalRooms, icon: Building2, color: '#7C5CFC' },
-    { label: 'Libres', value: stats.freeRooms, icon: CircleCheck, color: '#14B8A6' },
-    { label: 'Occupées', value: stats.occupiedRooms, icon: DoorOpen, color: '#FF6F61' },
-    { label: 'Réservations du mois', value: stats.monthlyBookings, icon: CalendarDays, color: '#F5A623' },
+    { label: t('analytics.totalRooms'), value: stats.totalRooms, icon: Building2, color: '#7C5CFC' },
+    { label: t('analytics.free'), value: stats.freeRooms, icon: CircleCheck, color: '#14B8A6' },
+    { label: t('analytics.occupied'), value: stats.occupiedRooms, icon: DoorOpen, color: '#FF6F61' },
+    { label: t('analytics.monthlyBookings'), value: stats.monthlyBookings, icon: CalendarDays, color: '#F5A623' },
   ]
 
   const bottomStats = [
-    { label: 'Utilisateurs', value: stats.totalUsers, icon: Users, color: '#7C5CFC' },
-    { label: 'Total réservations', value: stats.totalBookings, icon: ClipboardList, color: '#FF6F61' },
-    { label: 'Historique', value: stats.totalHistory, icon: History, color: '#14B8A6' },
+    { label: t('analytics.users'), value: stats.totalUsers, icon: Users, color: '#7C5CFC' },
+    { label: t('analytics.totalBookings'), value: stats.totalBookings, icon: ClipboardList, color: '#FF6F61' },
+    { label: t('analytics.history'), value: stats.totalHistory, icon: History, color: '#14B8A6' },
     {
-      label: "Taux d'occupation",
+      label: t('analytics.occupancyRate'),
       value: `${stats.totalRooms > 0 ? Math.round((stats.occupiedRooms / stats.totalRooms) * 100) : 0}%`,
       icon: Gauge,
       color: '#F5A623',
@@ -126,22 +127,20 @@ export default function AnalyticsPage() {
 
   return (
     <div className="min-h-screen bg-[#F5F7FA]">
-      {/* Bandeau d'en-tête */}
       <div className="relative overflow-hidden blueprint-grid-bg border-b border-[#E7E5EC]">
         <div className="blob blob-1" />
         <div className="blob blob-2" />
         <div className="blob blob-3" />
         <div className="relative w-full py-10 px-4">
-          <span className="text-xs font-semibold tracking-[0.2em] uppercase text-[#7C5CFC]">Vue d'ensemble</span>
+          <span className="text-xs font-semibold tracking-[0.2em] uppercase text-[#7C5CFC]">{t('analytics.overview')}</span>
           <h1 className="font-display text-3xl font-bold text-[#1A1A2E] mt-1 flex items-center gap-2">
             <BarChart3 className="w-7 h-7 text-[#7C5CFC]" />
-            Statistiques
+            {t('analytics.title')}
           </h1>
         </div>
       </div>
 
       <div className="w-full py-8 px-4">
-        {/* Cartes de statistiques */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {topStats.map((s) => (
             <div
@@ -158,13 +157,11 @@ export default function AnalyticsPage() {
           ))}
         </div>
 
-        {/* Graphiques */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Graphique à barres — taux d'occupation actuel */}
           <Card className="plaque-hover rounded-2xl border-[#E7E5EC] shadow-sm">
             <CardHeader>
               <CardTitle className="font-display text-lg font-semibold text-[#1A1A2E]">
-                📊 Occupation par salle (actuel)
+                {t('analytics.occupancyByRoom')}
               </CardTitle>
             </CardHeader>
             <CardContent className="h-80">
@@ -176,13 +173,13 @@ export default function AnalyticsPage() {
                   <Tooltip
                     formatter={(value: any) => {
                       if (typeof value === 'number') {
-                        return [`${value}%`, 'Taux d\'occupation']
+                        return [`${value}%`, t('analytics.currentOccupancy')]
                       }
-                      return [value, 'Taux d\'occupation']
+                      return [value, t('analytics.currentOccupancy')]
                     }}
                     contentStyle={{ backgroundColor: '#fff', borderRadius: '10px', border: '1px solid #E7E5EC' }}
                   />
-                  <Bar dataKey="occupancyRate" name="Taux d'occupation actuel" radius={[0, 6, 6, 0]}>
+                  <Bar dataKey="occupancyRate" name={t('analytics.currentOccupancy')} radius={[0, 6, 6, 0]}>
                     {roomData.map((room, index) => (
                       <Cell
                         key={`cell-${index}`}
@@ -195,10 +192,11 @@ export default function AnalyticsPage() {
             </CardContent>
           </Card>
 
-          {/* Camembert */}
           <Card className="plaque-hover rounded-2xl border-[#E7E5EC] shadow-sm">
             <CardHeader>
-              <CardTitle className="font-display text-lg font-semibold text-[#1A1A2E]">📊 Statut global</CardTitle>
+              <CardTitle className="font-display text-lg font-semibold text-[#1A1A2E]">
+                {t('analytics.globalStatus')}
+              </CardTitle>
             </CardHeader>
             <CardContent className="h-80">
               <ResponsiveContainer width="100%" height="100%">
@@ -236,10 +234,11 @@ export default function AnalyticsPage() {
             </CardContent>
           </Card>
 
-          {/* Graphique en ligne - Tendance mensuelle */}
           <Card className="plaque-hover rounded-2xl border-[#E7E5EC] shadow-sm lg:col-span-2">
             <CardHeader>
-              <CardTitle className="font-display text-lg font-semibold text-[#1A1A2E]">📈 Tendance mensuelle</CardTitle>
+              <CardTitle className="font-display text-lg font-semibold text-[#1A1A2E]">
+                {t('analytics.monthlyTrend')}
+              </CardTitle>
             </CardHeader>
             <CardContent className="h-80">
               <ResponsiveContainer width="100%" height="100%">
@@ -252,24 +251,23 @@ export default function AnalyticsPage() {
                     formatter={(value: any, name: any) => {
                       if (typeof value === 'number') {
                         if (name === 'bookings' || name === '📅 Réservations') {
-                          return [`${value} réservations`, 'Réservations']
+                          return [`${value} réservations`, t('analytics.bookings')]
                         }
-                        return [`${value}%`, 'Taux d\'occupation']
+                        return [`${value}%`, t('analytics.occupancy')]
                       }
                       return [value, name]
                     }}
                     contentStyle={{ backgroundColor: '#fff', borderRadius: '10px', border: '1px solid #E7E5EC' }}
                   />
                   <Legend />
-                  <Line yAxisId="left" type="monotone" dataKey="bookings" stroke="#7C5CFC" strokeWidth={3} name="📅 Réservations" dot={{ fill: '#7C5CFC', r: 6 }} />
-                  <Line yAxisId="right" type="monotone" dataKey="occupancy" stroke="#F5A623" strokeWidth={3} name="📊 Taux d'occupation %" dot={{ fill: '#F5A623', r: 6 }} />
+                  <Line yAxisId="left" type="monotone" dataKey="bookings" stroke="#7C5CFC" strokeWidth={3} name={t('analytics.bookings')} dot={{ fill: '#7C5CFC', r: 6 }} />
+                  <Line yAxisId="right" type="monotone" dataKey="occupancy" stroke="#F5A623" strokeWidth={3} name={t('analytics.occupancy')} dot={{ fill: '#F5A623', r: 6 }} />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
         </div>
 
-        {/* Statistiques supplémentaires */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
           {bottomStats.map((s) => (
             <div

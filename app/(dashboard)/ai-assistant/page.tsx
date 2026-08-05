@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Input } from '@/components/ui/input'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 interface Message {
   id: string
@@ -25,6 +26,7 @@ export default function AIAssistantPage() {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const { t } = useLanguage()
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -64,7 +66,7 @@ export default function AIAssistantPage() {
         {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: data.reply || `⚠️ ${data.error || 'Une erreur est survenue.'}`,
+          content: data.reply || `⚠️ ${data.error || t('aiAssistant.error')}`,
           timestamp: new Date()
         }
       ])
@@ -74,7 +76,7 @@ export default function AIAssistantPage() {
         {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: "⚠️ Impossible de contacter l'assistant. Réessayez dans un instant.",
+          content: t('aiAssistant.connectionError'),
           timestamp: new Date()
         }
       ])
@@ -88,30 +90,28 @@ export default function AIAssistantPage() {
   }
 
   const quickQuestions = [
-    'Quelles sont les salles libres ?',
-    'Salles occupées',
-    'Statistiques',
-    'Réservations de la semaine',
-    'Historique récent',
+    t('aiAssistant.freeRooms'),
+    t('aiAssistant.occupiedRooms'),
+    t('aiAssistant.stats'),
+    t('aiAssistant.weekBookings'),
+    t('aiAssistant.recentHistory'),
   ]
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-50 dark:bg-[#0a0e1a]">
-      {/* Fond dégradé animé — deux halos qui dérivent lentement */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="blob blob-a" />
         <div className="blob blob-b" />
       </div>
 
       <div className="relative container mx-auto py-8 px-4 max-w-4xl">
-        {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
             <span className="text-xs font-semibold tracking-[0.2em] uppercase" style={{ color: PRIMARY }}>
               MDI RoomPulse
             </span>
             <h1 className="text-3xl font-bold gradient-text mt-1">
-              🤖 Assistant IA
+              {t('aiAssistant.title')}
             </h1>
           </div>
           <div className="flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-full bg-white/70 dark:bg-white/5 backdrop-blur-sm border border-emerald-200/60 dark:border-emerald-400/20 text-emerald-700 dark:text-emerald-300">
@@ -119,16 +119,15 @@ export default function AIAssistantPage() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
             </span>
-            Connecté en direct
+            {t('aiAssistant.connected')}
           </div>
         </div>
 
-        {/* Panneau de chat — bordure dégradée animée + verre dépoli */}
         <div className="glow-border rounded-2xl">
           <div className="h-[600px] flex flex-col rounded-2xl bg-white/80 dark:bg-[#0f1420]/80 backdrop-blur-xl overflow-hidden">
             <div className="border-b border-slate-200/70 dark:border-white/10 px-5 py-3">
               <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                Questions en langage naturel, données en temps réel
+                {t('aiAssistant.naturalLanguage')}
               </span>
             </div>
 
@@ -170,7 +169,7 @@ export default function AIAssistantPage() {
 
             <div className="border-t border-slate-200/70 dark:border-white/10 p-4 flex gap-2">
               <Input
-                placeholder="Posez une question sur les salles..."
+                placeholder={t('aiAssistant.placeholder')}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -184,13 +183,12 @@ export default function AIAssistantPage() {
                 className="px-5 rounded-xl text-white font-medium text-sm shadow-md hover:shadow-lg hover:scale-[1.03] active:scale-95 disabled:opacity-40 disabled:hover:scale-100 transition-all"
                 style={{ background: `linear-gradient(135deg, ${PRIMARY}, #38BDF8)` }}
               >
-                Envoyer
+                {t('aiAssistant.send')}
               </button>
             </div>
           </div>
         </div>
 
-        {/* Questions rapides */}
         <div className="mt-5 flex flex-wrap gap-2">
           {quickQuestions.map((q, i) => (
             <button
@@ -215,9 +213,7 @@ export default function AIAssistantPage() {
           animation: shine 6s linear infinite;
         }
         @keyframes shine {
-          to {
-            background-position: 200% center;
-          }
+          to { background-position: 200% center; }
         }
 
         .blob {

@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 
 function LoginForm() {
   const [email, setEmail] = useState('')
@@ -17,6 +19,7 @@ function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
+  const { t } = useLanguage()
 
   const isSignUpFromUrl = searchParams.get('signup') === 'true'
   const signUpMode = isSignUpFromUrl || isSignUp
@@ -63,7 +66,7 @@ const notifyAdminOfNewUser = async (userEmail: string, userId: string) => {
         })
         if (error) {
           if (error.message.includes('User already registered')) {
-            toast.error('Cet email est déjà utilisé. Veuillez vous connecter.')
+            toast.error(t('login.errorEmailUsed'))
             setIsSignUp(false)
             setLoading(false)
             return
@@ -79,7 +82,7 @@ if (data.user) {
           }
         }
         
-        toast.success('✅ Compte créé ! Un email a été envoyé à l\'administrateur pour validation.')
+        toast.success(t('login.successSignUp'))
         router.push('/login?waiting=true')
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -88,7 +91,7 @@ if (data.user) {
         })
         if (error) {
           if (error.message.includes('Invalid login credentials')) {
-            toast.error('Email ou mot de passe incorrect.')
+            toast.error(t('login.errorInvalidCredentials'))
           } else {
             toast.error(error.message)
           }
@@ -121,43 +124,46 @@ if (data.user) {
         }
 
         if (role !== 'admin' && !isVerified) {
-          toast.error('⏳ Votre compte est en attente de vérification. Contactez l\'administrateur.')
+          toast.error(t('login.pendingVerification'))
           await supabase.auth.signOut()
           setLoading(false)
           return
         }
 
         if (role === 'admin') {
-          toast.success('👑 Bienvenue Admin ! Vous avez accès à tout.')
+          toast.success(t('login.welcomeAdmin'))
         } else {
-          toast.success('Bienvenue !')
+          toast.success(t('login.welcome'))
         }
 
         router.push('/dashboard')
       }
     } catch (error: any) {
-      toast.error(error.message || 'Une erreur est survenue')
+      toast.error(error.message || t('common.error'))
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <Card className="w-full max-w-md shadow-lg">
+    <Card className="w-full max-w-md shadow-lg relative">
+      <div className="absolute top-4 right-4">
+        <LanguageSwitcher />
+      </div>
       <CardHeader className="text-center pb-2">
-        <CardTitle className="text-2xl text-[#0056B3]">MDI RoomPulse</CardTitle>
+        <CardTitle className="text-2xl text-[#0056B3]">{t('nav.appName')}</CardTitle>
         <CardDescription className="mt-1">
-          {signUpMode ? 'Créer un compte' : 'Connectez-vous à votre espace'}
+          {signUpMode ? t('login.signUp') : t('login.signIn')}
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-5 pt-6">
           <div className="space-y-1.5">
-            <Label htmlFor="email">Adresse email</Label>
+            <Label htmlFor="email">{t('login.email')}</Label>
             <Input
               id="email"
               type="email"
-              placeholder="vous@entreprise.com"
+              placeholder={t('login.emailPlaceholder')}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -167,7 +173,7 @@ if (data.user) {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="password">Mot de passe</Label>
+            <Label htmlFor="password">{t('login.password')}</Label>
             <Input
               id="password"
               type="password"
@@ -180,7 +186,7 @@ if (data.user) {
               className="h-11"
             />
             {signUpMode && (
-              <p className="text-xs text-gray-500 pt-0.5">Minimum 6 caractères</p>
+              <p className="text-xs text-gray-500 pt-0.5">{t('login.minChars')}</p>
             )}
           </div>
         </CardContent>
@@ -191,7 +197,7 @@ if (data.user) {
             className="w-full h-11 bg-[#0056B3] hover:bg-[#00449E]"
             disabled={loading}
           >
-            {loading ? 'Chargement...' : signUpMode ? 'Créer un compte' : 'Se connecter'}
+            {loading ? t('login.loading') : signUpMode ? t('login.signUpButton') : t('login.signInButton')}
           </Button>
 
           <Button
@@ -201,7 +207,7 @@ if (data.user) {
             onClick={() => setIsSignUp(!signUpMode)}
             disabled={loading}
           >
-            {signUpMode ? 'Déjà un compte ? Se connecter' : "Pas encore de compte ? S'inscrire"}
+            {signUpMode ? t('login.switchToLogin') : t('login.switchToSignUp')}
           </Button>
         </CardFooter>
       </form>
@@ -210,9 +216,10 @@ if (data.user) {
 }
 
 export default function LoginPage() {
+  const { t } = useLanguage()
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <Suspense fallback={<div>Chargement...</div>}>
+      <Suspense fallback={<div>{t('login.loading')}</div>}>
         <LoginForm />
       </Suspense>
     </div>

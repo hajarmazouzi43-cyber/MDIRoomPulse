@@ -10,6 +10,7 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { notifyRoomStatusChange, askWhoIsFree, notifyRoomOutOfService } from '@/lib/notifications'
 import { getLocalDateString } from '@/lib/dateUtils'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 import {
   Users,
   MapPin,
@@ -57,11 +58,13 @@ const categoryIcons: Record<string, any> = {
   detente: Sofa,
 }
 
-const categoryLabels: Record<string, string> = {
-  bureau: 'Bureau',
-  reunion: 'Réunion',
-  poste: 'Poste de travail',
-  detente: 'Détente',
+function getCategoryLabels(t: (key: string) => string): Record<string, string> {
+  return {
+    bureau: t('rooms.categoryBureau'),
+    reunion: t('rooms.categoryReunion'),
+    poste: t('rooms.categoryPoste'),
+    detente: t('rooms.categoryDetente'),
+  }
 }
 
 // Couleurs par catégorie (sans vert pour poste)
@@ -144,15 +147,15 @@ function burstConfetti(x: number, y: number) {
   setTimeout(() => container.remove(), 800)
 }
 
-function formatRemaining(until: string | null, now: Date): string | null {
+function formatRemaining(until: string | null, now: Date, t: (key: string, vars?: Record<string, string | number>) => string): string | null {
   if (!until) return null
   const end = new Date(until).getTime()
   const diff = end - now.getTime()
-  if (diff <= 0) return 'Terminé'
+  if (diff <= 0) return t('rooms.finished')
   const h = Math.floor(diff / 3_600_000)
   const m = Math.floor((diff % 3_600_000) / 60_000)
-  if (h > 0) return `${h}h ${m}min restantes`
-  return `${m}min restantes`
+  if (h > 0) return t('rooms.remainingHours', { h, m })
+  return t('rooms.remainingMinutes', { m })
 }
 
 export default function RoomsPage() {
@@ -164,6 +167,8 @@ export default function RoomsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [now, setNow] = useState(new Date())
   const supabase = createClient()
+  const { t } = useLanguage()
+  const categoryLabels = getCategoryLabels(t)
 
   useEffect(() => {
     fetchRooms()
@@ -245,7 +250,7 @@ export default function RoomsPage() {
 
   const occupyRoomWithTime = async (roomId: string, roomName: string, peopleCount: number = 1, startTime: string, endTime: string) => {
     if (!user) {
-      toast.error('Veuillez vous connecter pour occuper une salle')
+      toast.error(t('rooms.pleaseSignInToOccupy'))
       return
     }
 
@@ -256,7 +261,7 @@ export default function RoomsPage() {
       .single()
 
     if (!room) {
-      toast.error('Salle introuvable')
+      toast.error(t('rooms.roomNotFound'))
       return
     }
 
@@ -264,7 +269,7 @@ export default function RoomsPage() {
     const currentPeople = room.current_people || 0
 
     if (currentPeople >= maxPeople) {
-      toast.error(`Salle pleine (${currentPeople}/${maxPeople})`)
+      toast.error(t('rooms.roomFull', { current: currentPeople, max: maxPeople }))
       return
     }
 
@@ -288,7 +293,7 @@ export default function RoomsPage() {
       .gt('end_time', startTime)
 
     if (conflicts && conflicts.length > 0) {
-      toast.error(`⚠️ Créneau déjà réservé dans le calendrier: "${conflicts[0].title}"`)
+      toast.error(t('rooms.slotAlreadyBookedCalendar', { title: conflicts[0].title }))
       return
     }
 
@@ -304,7 +309,7 @@ export default function RoomsPage() {
       .eq('id', roomId)
 
     if (error) {
-      toast.error('Erreur lors de l\'occupation')
+      toast.error(t('rooms.occupyError'))
     } else {
       const { error: bookingError } = await supabase
         .from('bookings')
@@ -322,11 +327,11 @@ export default function RoomsPage() {
         console.error('Erreur de synchronisation avec le calendrier:', bookingError)
       }
 
-      toast.success(`${roomName}: ${newTotal}/${maxPeople} personnes de ${startTime} à ${endTime}`)
+      toast.success(t('rooms.occupySuccess', { room: roomName, total: newTotal, max: maxPeople, start: startTime, end: endTime }))
 
       const result = await notifyRoomStatusChange(roomId, 'occupied')
       if (result.email > 0 || result.sms > 0) {
-        toast.info(`📢 ${result.email + result.sms} abonnés notifiés`)
+        toast.info(t('rooms.subscribersNotified', { count: result.email + result.sms }))
       }
 
       fetchRooms()
@@ -346,7 +351,7 @@ export default function RoomsPage() {
       .eq('id', roomId)
 
     if (error) {
-      toast.error('Erreur lors de la libération')
+      toast.error(t('rooms.freeError'))
       return
     }
 
@@ -369,11 +374,11 @@ export default function RoomsPage() {
     }
 
     if (e) burstConfetti(e.clientX, e.clientY)
-    toast.success(`🎉 ${roomName} est maintenant libre`)
+    toast.success(t('rooms.freeSuccess', { room: roomName }))
 
     const result = await notifyRoomStatusChange(roomId, 'free')
     if (result.email > 0 || result.sms > 0) {
-      toast.info(`📢 ${result.email + result.sms} abonnés notifiés`)
+      toast.info(t('rooms.subscribersNotified', { count: result.email + result.sms }))
     }
 
     fetchRooms()
@@ -383,15 +388,15 @@ export default function RoomsPage() {
   const handleSetOutOfService = async (roomId: string, roomName: string) => {
     // Vérifier si l'utilisateur est admin
     if (user?.role !== 'admin') {
-      toast.error('Seul un administrateur peut mettre une salle hors service')
+      toast.error(t('rooms.adminOnlyOutOfService'))
       return
     }
 
-    const reason = prompt(`Raison de la mise hors service de "${roomName}" :`)
+    const reason = prompt(t('rooms.outOfServiceReasonPrompt', { room: roomName }))
     if (reason === null) return
     
     if (reason.trim() === '') {
-      toast.error('Veuillez entrer une raison')
+      toast.error(t('rooms.pleaseEnterReason'))
       return
     }
 
@@ -428,13 +433,13 @@ export default function RoomsPage() {
       const result = await notifyRoomOutOfService(roomId, reason)
       
       if (result.email > 0 || result.sms > 0) {
-        toast.success(`📢 ${result.email + result.sms} réservataires notifiés de l'annulation`)
+        toast.success(t('rooms.cancelledBookingsNotified', { count: result.email + result.sms }))
       }
 
-      toast.success(`✅ "${roomName}" est maintenant hors service`)
+      toast.success(t('rooms.nowOutOfService', { room: roomName }))
       fetchRooms()
     } catch (error) {
-      toast.error('Erreur lors de la mise hors service')
+      toast.error(t('rooms.outOfServiceError'))
       console.error(error)
     }
   }
@@ -443,7 +448,7 @@ export default function RoomsPage() {
   const handleBackInService = async (roomId: string, roomName: string) => {
     // Vérifier si l'utilisateur est admin
     if (user?.role !== 'admin') {
-      toast.error('Seul un administrateur peut remettre une salle en service')
+      toast.error(t('rooms.adminOnlyBackInService'))
       return
     }
 
@@ -473,31 +478,31 @@ export default function RoomsPage() {
       const result = await notifyRoomStatusChange(roomId, 'back_in_service')
       
       if (result.email > 0 || result.sms > 0) {
-        toast.success(`📢 ${result.email + result.sms} abonnés notifiés`)
+        toast.success(t('rooms.subscribersNotified', { count: result.email + result.sms }))
       }
 
-      toast.success(`✅ "${roomName}" est de nouveau disponible`)
+      toast.success(t('rooms.nowBackInService', { room: roomName }))
       fetchRooms()
     } catch (error) {
-      toast.error('Erreur lors de la remise en service')
+      toast.error(t('rooms.backInServiceError'))
       console.error(error)
     }
   }
 
   const handleAskWhoIsFree = async () => {
     if (!user) {
-      toast.error('Veuillez vous connecter')
+      toast.error(t('rooms.pleaseSignIn'))
       return
     }
 
-    toast.info('Demande en cours...')
+    toast.info(t('rooms.requestInProgress'))
 
     const result = await askWhoIsFree(user.id, user.email?.split('@')[0] || 'Utilisateur')
 
     if (result.success) {
-      toast.success(`${result.free} salles libres, ${result.occupied} occupées`)
+      toast.success(t('rooms.whoIsFreeResult', { free: result.free, occupied: result.occupied }))
     } else {
-      toast.error('Erreur lors de la vérification')
+      toast.error(t('rooms.whoIsFreeError'))
     }
   }
 
@@ -568,13 +573,13 @@ export default function RoomsPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 fade-in-up">
           <div>
             <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white flex flex-wrap items-center gap-3">
-              <span className="gradient-text">🏢 Salles &amp; Espaces</span>
+              <span className="gradient-text">{t('rooms.title')}</span>
               <Badge variant="outline" className="text-sm font-normal border-[#0056B3] text-[#0056B3]">
-                {totalAnim} salles
+                {totalAnim} {t('rooms.totalRoomsBadge')}
               </Badge>
             </h1>
             <p className="text-gray-500 dark:text-gray-400 mt-1">
-              {availableCount} disponible{availableCount > 1 ? 's' : ''} · {occupiedCount} occupée{occupiedCount > 1 ? 's' : ''}
+              {availableCount} {availableCount > 1 ? t('rooms.availableCountPlural') : t('rooms.availableCount')} · {occupiedCount} {occupiedCount > 1 ? t('rooms.occupiedCountPlural') : t('rooms.occupiedCount')}
             </p>
           </div>
           <div className="flex gap-3">
@@ -583,7 +588,7 @@ export default function RoomsPage() {
               className="relative overflow-hidden bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white shadow-lg shadow-purple-500/30 transition-all hover:scale-105 active:scale-95"
             >
               <Sparkles className="w-4 h-4 mr-2" />
-              Qui est libre ?
+              {t('rooms.whoIsFree')}
             </Button>
           </div>
         </div>
@@ -591,21 +596,21 @@ export default function RoomsPage() {
         {/* Mini tableau de bord */}
         <div className="grid grid-cols-3 gap-3 md:gap-4 mb-6">
           <StatTile
-            label="Disponibles"
+            label={t('rooms.statAvailable')}
             value={availableAnim}
             icon={<Sofa className="w-4 h-4" />}
             hexA="#3b82f6"
             hexB="#0056B3"
           />
           <StatTile
-            label="Occupées"
+            label={t('rooms.statOccupied')}
             value={occupiedAnim}
             icon={<Users className="w-4 h-4" />}
             hexA="#ef4444"
             hexB="#f97316"
           />
           <StatTile
-            label="Hors service"
+            label={t('rooms.statOutOfService')}
             value={outOfServiceCount}
             icon={<Wrench className="w-4 h-4" />}
             hexA="#6b7280"
@@ -618,9 +623,9 @@ export default function RoomsPage() {
           <div className="relative overflow-hidden bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-950/30 dark:to-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-5 mb-6 flex items-center gap-4 fade-in-up">
             <Sofa className="w-8 h-8 text-amber-500 shrink-0 animate-bounce-soft" />
             <div>
-              <p className="font-semibold text-amber-800 dark:text-amber-400">Toutes les salles sont occupées !</p>
+              <p className="font-semibold text-amber-800 dark:text-amber-400">{t('rooms.allOccupiedTitle')}</p>
               <p className="text-amber-700 dark:text-amber-500 text-sm">
-                Installez-vous confortablement dans l'espace détente avec les fauteuils.
+                {t('rooms.allOccupiedDesc')}
               </p>
             </div>
           </div>
@@ -632,10 +637,10 @@ export default function RoomsPage() {
             </div>
             <div>
               <p className="font-semibold text-blue-800 dark:text-blue-400">
-                {availableCount} salle{availableCount > 1 ? 's' : ''} disponible{availableCount > 1 ? 's' : ''}
+                {availableCount} {availableCount > 1 ? t('rooms.availableCountPlural') : t('rooms.availableCount')}
               </p>
               <p className="text-blue-700 dark:text-blue-500 text-sm">
-                Consultez la liste ci-dessous pour trouver votre espace idéal.
+                {t('rooms.someFreeDesc')}
               </p>
             </div>
           </div>
@@ -643,14 +648,14 @@ export default function RoomsPage() {
 
         {/* Filtres */}
         <div className="flex flex-wrap items-center gap-3 mb-6">
-          <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">Filtrer :</span>
+          <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">{t('rooms.filterLabel')}</span>
           <Button
             variant={selectedCategory === null ? 'default' : 'outline'}
             size="sm"
             onClick={() => setSelectedCategory(null)}
             className={`transition-all duration-300 ${selectedCategory === null ? 'bg-[#0056B3] hover:bg-[#00449E] scale-105 shadow-md shadow-[#0056B3]/30' : 'hover:scale-105'}`}
           >
-            Toutes
+            {t('rooms.filterAll')}
           </Button>
           {Object.entries(categoryLabels).map(([key, label]) => {
             const count = rooms.filter(r => r.category === key).length
@@ -674,7 +679,7 @@ export default function RoomsPage() {
         {/* Recherche */}
         <div className="relative mb-6 search-glow rounded-xl">
           <Input
-            placeholder="Rechercher une salle, un équipement, une localisation..."
+            placeholder={t('rooms.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10 py-6 rounded-xl border-gray-200 dark:border-[#334155] bg-white dark:bg-[#1a1a2e] focus-visible:ring-2 focus-visible:ring-[#0056B3] transition-all"
@@ -700,7 +705,7 @@ export default function RoomsPage() {
             const isDetente = room.category === 'detente'
             const isOccupied = room.is_occupied
             const isOutOfService = room.is_out_of_service
-            const remaining = isOccupied ? formatRemaining(room.occupied_until, now) : null
+            const remaining = isOccupied ? formatRemaining(room.occupied_until, now, t) : null
             const fillPct = room.max_people > 0 ? Math.min(100, ((room.current_people || 0) / room.max_people) * 100) : 0
             const isAdmin = user?.role === 'admin'
 
@@ -768,7 +773,7 @@ export default function RoomsPage() {
                     <div className="flex flex-wrap gap-1.5 md:gap-2 text-xs md:text-sm room-details">
                       <span className="flex items-center gap-1 text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full">
                         <Users className="w-3 h-3 md:w-3.5 md:h-3.5" />
-                        <span className="truncate">{room.capacity} pers.</span>
+                        <span className="truncate">{room.capacity} {t('rooms.people')}</span>
                       </span>
                       {room.max_people > 0 && (
                         <span className="flex items-center gap-1 text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full">
@@ -777,7 +782,7 @@ export default function RoomsPage() {
                         </span>
                       )}
                       <span className="flex items-center gap-1 text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full">
-                        {categoryLabels[room.category] || 'Salle'}
+                        {categoryLabels[room.category] || t('rooms.categoryDefault')}
                       </span>
                     </div>
 
@@ -858,7 +863,7 @@ export default function RoomsPage() {
                               className="flex-1 text-xs md:text-sm bg-gradient-to-r from-[#0056B3] to-[#00A3E0] hover:opacity-90 text-white shadow-lg shadow-[#0056B3]/25 transition-all hover:scale-105 active:scale-95 py-1 h-7 md:h-9"
                             >
                               <Users className="w-3 h-3 md:w-3.5 md:h-3.5 mr-1" />
-                              <span className="hidden sm:inline">Occuper</span>
+                              <span className="hidden sm:inline">{t('rooms.occupy')}</span>
                               <span className="sm:hidden">OK</span>
                             </Button>
                           </div>
@@ -868,7 +873,7 @@ export default function RoomsPage() {
                             className="w-full text-xs md:text-sm bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg shadow-red-500/25 transition-all hover:scale-105 active:scale-95 py-1 h-7 md:h-9"
                           >
                             <PartyPopper className="w-3 h-3 md:w-3.5 md:h-3.5 mr-1" />
-                            <span className="hidden sm:inline">Libérer</span>
+                            <span className="hidden sm:inline">{t('rooms.free')}</span>
                             <span className="sm:hidden">✕</span>
                           </Button>
                         )}
@@ -884,7 +889,7 @@ export default function RoomsPage() {
                           onClick={() => handleBackInService(room.id, room.name)}
                           className="border-green-500 text-green-600 hover:bg-green-50 text-xs h-7"
                         >
-                          ✅ Remettre en service
+                          {t('rooms.backInService')}
                         </Button>
                       </div>
                     )}
@@ -898,7 +903,7 @@ export default function RoomsPage() {
                           onClick={() => handleSetOutOfService(room.id, room.name)}
                           className="border-amber-500 text-amber-600 hover:bg-amber-50 text-xs h-7"
                         >
-                          🚫 Mettre hors service
+                          {t('rooms.setOutOfService')}
                         </Button>
                       </div>
                     )}
@@ -906,13 +911,13 @@ export default function RoomsPage() {
                     {isDetente && (
                       <div className="text-xs text-gray-500 dark:text-gray-400 italic flex items-center gap-1 bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg">
                         <Sofa className="w-3 h-3 text-amber-500" />
-                        <span className="truncate">Toujours disponible</span>
+                        <span className="truncate">{t('rooms.alwaysAvailable')}</span>
                       </div>
                     )}
 
                     <Link href={`/rooms/${room.id}`}>
                       <p className="text-xs md:text-sm text-[#0056B3] dark:text-[#00A3E0] hover:underline mt-1 flex items-center gap-1 group-hover:gap-2 transition-all room-link">
-                        <span className="truncate">Voir les détails</span>
+                        <span className="truncate">{t('rooms.viewDetails')}</span>
                         <ChevronRight className="w-3 h-3 md:w-3.5 md:h-3.5 transition-transform group-hover:translate-x-1 shrink-0" />
                       </p>
                     </Link>
@@ -926,20 +931,20 @@ export default function RoomsPage() {
         {filteredRooms.length === 0 && (
           <div className="text-center py-16 fade-in-up">
             <Sofa className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 animate-bounce-soft mb-3" />
-            <p className="text-gray-500 dark:text-gray-400 text-lg">Aucune salle ne correspond à vos critères</p>
+            <p className="text-gray-500 dark:text-gray-400 text-lg">{t('rooms.noRoomsMatch')}</p>
             <Button
               variant="outline"
               onClick={() => { setSearchTerm(''); setSelectedCategory(null) }}
               className="mt-4 hover:scale-105 transition-transform"
             >
-              Réinitialiser les filtres
+              {t('rooms.resetFilters')}
             </Button>
           </div>
         )}
 
         <button
           onClick={handleAskWhoIsFree}
-          aria-label="Qui est libre ?"
+          aria-label={t('rooms.whoIsFree')}
           className="md:hidden fixed bottom-5 right-5 z-40 w-14 h-14 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-xl shadow-purple-500/40 flex items-center justify-center active:scale-90 transition-transform"
         >
           <Sparkles className="w-6 h-6" />

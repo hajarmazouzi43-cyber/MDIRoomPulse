@@ -5,12 +5,13 @@ import { createClient } from '@/lib/supabase/client'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 interface Booking {
   id: string
@@ -33,8 +34,8 @@ export default function BookingPage() {
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
   const supabase = createClient()
+  const { t } = useLanguage()
 
-  // Nouvelle réservation
   const [newBooking, setNewBooking] = useState({
     title: '',
     start: '',
@@ -88,31 +89,25 @@ export default function BookingPage() {
 
   const handleBookingSubmit = async () => {
     if (!user) {
-      toast.error('Please sign in to book a room')
+      toast.error(t('booking.pleaseSignIn'))
       return
     }
 
     if (!newBooking.title || !newBooking.room_id || !newBooking.start || !newBooking.end) {
-      toast.error('Please fill all fields')
+      toast.error(t('booking.fillAllFields'))
       return
     }
 
-    // newBooking.start / .end sont des chaînes "datetime-local" du type
-    // "2026-08-05T14:30". On les découpe en booking_date / start_time /
-    // end_time car c'est le schéma utilisé partout ailleurs (occupation
-    // directe, rappels, sync du statut des salles) — sans ça, la salle ne
-    // devient jamais "occupée" ni "libre" automatiquement pour cette
-    // réservation.
     const [startDatePart, startTimePart] = newBooking.start.split('T')
     const [endDatePart, endTimePart] = newBooking.end.split('T')
 
     if (startDatePart !== endDatePart) {
-      toast.error('Start and end must be on the same day')
+      toast.error(t('booking.sameDayRequired'))
       return
     }
 
     if (endTimePart <= startTimePart) {
-      toast.error('End time must be after start time')
+      toast.error(t('booking.endAfterStart'))
       return
     }
 
@@ -129,9 +124,9 @@ export default function BookingPage() {
       })
 
     if (error) {
-      toast.error('Error booking room')
+      toast.error(t('booking.bookError'))
     } else {
-      toast.success('Room booked!')
+      toast.success(t('booking.bookSuccess'))
       fetchData()
       setIsDialogOpen(false)
       setNewBooking({ title: '', start: '', end: '', room_id: '' })
@@ -139,16 +134,16 @@ export default function BookingPage() {
   }
 
   const handleBookingDelete = async (bookingId: string) => {
-    if (!confirm('Are you sure?')) return
+    if (!confirm(t('booking.deleteConfirm'))) return
     const { error } = await supabase
       .from('bookings')
       .delete()
       .eq('id', bookingId)
     
     if (error) {
-      toast.error('Error deleting booking')
+      toast.error(t('booking.deleteError'))
     } else {
-      toast.success('Booking deleted')
+      toast.success(t('booking.deleteSuccess'))
       fetchData()
     }
   }
@@ -167,25 +162,23 @@ export default function BookingPage() {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-[#0056B3]">📅 Booking</h1>
+        <h1 className="text-3xl font-bold text-[#0056B3]">{t('booking.title')}</h1>
       </div>
 
-      {/* Sélecteur de salle */}
       <div className="mb-4">
-        <Label>Select Room</Label>
+        <Label>{t('booking.selectRoom')}</Label>
         <select
           className="w-full border rounded-lg p-2"
           value={selectedRoom}
           onChange={(e) => setSelectedRoom(e.target.value)}
         >
-          <option value="">All rooms</option>
+          <option value="">{t('booking.allRooms')}</option>
           {rooms.map((room) => (
             <option key={room.id} value={room.id}>{room.name}</option>
           ))}
         </select>
       </div>
 
-      {/* Calendrier */}
       <Card>
         <CardContent className="p-4">
           <FullCalendar
@@ -202,7 +195,7 @@ export default function BookingPage() {
               .filter(b => !selectedRoom || b.room_id === selectedRoom)
               .map(b => ({
                 id: b.id,
-                title: `${b.room_name} - ${b.title}`,
+                title: t('booking.eventTitle', { room: b.room_name, title: b.title }),
                 start: `${b.booking_date}T${b.start_time}`,
                 end: `${b.booking_date}T${b.end_time}`,
                 extendedProps: { booking: b }
@@ -210,7 +203,7 @@ export default function BookingPage() {
             }
             eventClick={(info) => {
               const booking = info.event.extendedProps.booking
-              if (confirm(`Delete "${booking.title}" in ${booking.room_name}?`)) {
+              if (confirm(t('booking.deleteConfirm', { title: booking.title, room: booking.room_name }))) {
                 handleBookingDelete(booking.id)
               }
             }}
@@ -219,29 +212,28 @@ export default function BookingPage() {
         </CardContent>
       </Card>
 
-      {/* Dialog pour ajouter */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Book a Room</DialogTitle>
+            <DialogTitle>{t('booking.bookRoom')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Title</Label>
+              <Label>{t('booking.titleLabel')}</Label>
               <Input
                 value={newBooking.title}
                 onChange={(e) => setNewBooking({...newBooking, title: e.target.value})}
-                placeholder="Meeting with team"
+                placeholder={t('booking.titlePlaceholder')}
               />
             </div>
             <div>
-              <Label>Room</Label>
+              <Label>{t('booking.roomLabel')}</Label>
               <select
                 className="w-full border rounded-lg p-2"
                 value={newBooking.room_id}
                 onChange={(e) => setNewBooking({...newBooking, room_id: e.target.value})}
               >
-                <option value="">Select a room</option>
+                <option value="">{t('booking.selectRoom')}</option>
                 {rooms.map((room) => (
                   <option key={room.id} value={room.id}>{room.name}</option>
                 ))}
@@ -249,7 +241,7 @@ export default function BookingPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Start</Label>
+                <Label>{t('booking.startLabel')}</Label>
                 <Input
                   type="datetime-local"
                   value={newBooking.start}
@@ -257,7 +249,7 @@ export default function BookingPage() {
                 />
               </div>
               <div>
-                <Label>End</Label>
+                <Label>{t('booking.endLabel')}</Label>
                 <Input
                   type="datetime-local"
                   value={newBooking.end}
@@ -266,7 +258,7 @@ export default function BookingPage() {
               </div>
             </div>
             <Button onClick={handleBookingSubmit} className="w-full">
-              Book Room
+              {t('booking.book')}
             </Button>
           </div>
         </DialogContent>

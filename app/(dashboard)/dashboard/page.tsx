@@ -16,6 +16,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Plus, ChevronLeft, ChevronRight, Clock, CalendarDays } from 'lucide-react'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 interface Booking {
   id: string
@@ -73,6 +74,7 @@ export default function DashboardPage() {
   })
 
   const supabase = createClient()
+  const { t } = useLanguage()
   const dateInputRef = useRef<HTMLInputElement>(null)
   const touchStartX = useRef<number | null>(null)
 
@@ -100,9 +102,9 @@ export default function DashboardPage() {
     }
     touchStartX.current = null
   }
-  const weekDayLabels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
-  const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
-  const monthShort = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']
+  const weekDayLabels = t('dashboard.weekDayLabels') as unknown as string[]
+  const monthNames = t('dashboard.monthNames') as unknown as string[]
+  const monthShort = t('dashboard.monthShort') as unknown as string[]
 
   // Lundi de la semaine contenant `date`
   const getMonday = (date: Date) => {
@@ -171,12 +173,12 @@ export default function DashboardPage() {
 
   const checkAvailableRooms = (date: string, start: string, end: string) => {
     if (!date || !start || !end) {
-      toast.error('Veuillez remplir tous les champs')
+      toast.error(t('dashboard.fillAllFields'))
       return
     }
 
     if (start >= end) {
-      toast.error('L\'heure de début doit être avant l\'heure de fin')
+      toast.error(t('dashboard.startBeforeEnd'))
       return
     }
 
@@ -217,7 +219,7 @@ export default function DashboardPage() {
 
   const handleCellClick = (date: Date, roomId: string, time: string) => {
     if (!user) {
-      toast.error('Veuillez vous connecter')
+      toast.error(t('dashboard.pleaseSignIn'))
       return
     }
 
@@ -231,7 +233,7 @@ export default function DashboardPage() {
     )
 
     if (existing) {
-      toast.info(`Réservé: ${existing.title}`)
+      toast.info(t('dashboard.alreadyBooked', { title: existing.title }))
       return
     }
 
@@ -251,12 +253,12 @@ export default function DashboardPage() {
 
   const handleBookingSubmit = async () => {
     if (!user) {
-      toast.error('Veuillez vous connecter')
+      toast.error(t('dashboard.pleaseSignIn'))
       return
     }
 
     if (!formData.title || !formData.room_id || !formData.booking_date) {
-      toast.error('Veuillez remplir tous les champs')
+      toast.error(t('dashboard.fillAllFields'))
       return
     }
 
@@ -268,7 +270,7 @@ export default function DashboardPage() {
     )
 
     if (hasConflict) {
-      toast.error('⚠️ Ce créneau est déjà réservé')
+      toast.error(t('dashboard.slotAlreadyBooked'))
       return
     }
 
@@ -285,9 +287,9 @@ export default function DashboardPage() {
       })
 
     if (error) {
-      toast.error('Erreur: ' + error.message)
+      toast.error(t('dashboard.bookingError', { message: error.message }))
     } else {
-      toast.success('✅ Salle réservée !')
+      toast.success(t('dashboard.bookingSuccess'))
 
       // Synchronisation avec la page Rooms : si ce créneau couvre l'instant présent
       // (réservation "maintenant"), on marque directement la salle comme occupée
@@ -353,7 +355,7 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-semibold text-gray-800 dark:text-gray-200">
-            📅 Réservations
+            {t('dashboard.title')}
           </h1>
         </div>
         <Button
@@ -362,7 +364,7 @@ export default function DashboardPage() {
           className="hover:opacity-90 text-white px-6 py-2 rounded-lg shadow-md hover:shadow-lg transition-all"
         >
           <Plus className="w-4 h-4 mr-2" />
-          Nouvelle réservation
+          {t('dashboard.newBooking')}
         </Button>
       </div>
 
@@ -372,7 +374,7 @@ export default function DashboardPage() {
           onClick={() => changeWeek(-1)}
           className="w-9 h-9 flex items-center justify-center rounded-full bg-white dark:bg-[#0f172a] border border-gray-200 dark:border-[#334155] shadow-sm hover:shadow-md hover:scale-105 active:scale-95 transition-all"
           style={{ color: PRIMARY }}
-          aria-label="Semaine précédente"
+          aria-label={t('dashboard.previousWeek')}
         >
           <ChevronLeft className="w-5 h-5" strokeWidth={2.5} />
         </button>
@@ -385,14 +387,14 @@ export default function DashboardPage() {
             className="text-sm font-medium px-3 py-1 rounded-md transition-colors"
             style={{ color: PRIMARY, backgroundColor: `${PRIMARY}14` }}
           >
-            Aujourd'hui
+            {t('dashboard.today')}
           </button>
           <button
             onClick={openDatePicker}
             className="relative w-8 h-8 flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-[#334155] transition-colors"
             style={{ color: PRIMARY }}
-            aria-label="Aller à une date précise"
-            title="Sauter à une date (mois/année)"
+            aria-label={t('dashboard.jumpToDate')}
+            title={t('dashboard.jumpToDate')}
           >
             <CalendarDays className="w-4.5 h-4.5" />
             <input
@@ -413,7 +415,7 @@ export default function DashboardPage() {
           onClick={() => changeWeek(1)}
           className="w-9 h-9 flex items-center justify-center rounded-full bg-white dark:bg-[#0f172a] border border-gray-200 dark:border-[#334155] shadow-sm hover:shadow-md hover:scale-105 active:scale-95 transition-all"
           style={{ color: PRIMARY }}
-          aria-label="Semaine suivante"
+          aria-label={t('dashboard.nextWeek')}
         >
           <ChevronRight className="w-5 h-5" strokeWidth={2.5} />
         </button>
@@ -436,7 +438,7 @@ export default function DashboardPage() {
             <thead>
               <tr>
                 <th className="p-3 text-left text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-[#1a1a2e] sticky left-0 z-10">
-                  Salle
+                  {t('dashboard.room')}
                 </th>
                 {weekDays.map((day, index) => {
                   const accent = dayAccent[index]
@@ -526,7 +528,7 @@ export default function DashboardPage() {
       {/* Liste des réservations du jour */}
       <div className="mt-6">
         <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">
-          Réservations du jour
+          {t('dashboard.todayBookings')}
         </h3>
         <div className="space-y-1.5">
           {bookings
@@ -547,7 +549,7 @@ export default function DashboardPage() {
               )
             })}
           {bookings.filter(b => b.booking_date === getLocalDateString()).length === 0 && (
-            <p className="text-sm text-gray-400 dark:text-gray-500">Aucune réservation aujourd'hui</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500">{t('dashboard.noBookingsToday')}</p>
           )}
         </div>
       </div>
@@ -556,21 +558,21 @@ export default function DashboardPage() {
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold" style={{ color: PRIMARY }}>📝 Nouvelle réservation</DialogTitle>
+            <DialogTitle className="text-2xl font-bold" style={{ color: PRIMARY }}>{t('dashboard.modalTitle')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <Label>Titre</Label>
+              <Label>{t('dashboard.formTitleLabel')}</Label>
               <Input
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="Réunion avec l'équipe"
+                placeholder={t('dashboard.formTitlePlaceholder')}
                 className="mt-1"
               />
             </div>
 
             <div>
-              <Label>Date</Label>
+              <Label>{t('dashboard.dateLabel')}</Label>
               <Input
                 type="date"
                 value={formData.booking_date}
@@ -585,7 +587,7 @@ export default function DashboardPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Début</Label>
+                <Label>{t('dashboard.startLabel')}</Label>
                 <Input
                   type="time"
                   value={formData.start_time}
@@ -598,7 +600,7 @@ export default function DashboardPage() {
                 />
               </div>
               <div>
-                <Label>Fin</Label>
+                <Label>{t('dashboard.endLabel')}</Label>
                 <Input
                   type="time"
                   value={formData.end_time}
@@ -626,13 +628,13 @@ export default function DashboardPage() {
               }}
               onClick={() => checkAvailableRooms(formData.booking_date, formData.start_time, formData.end_time)}
             >
-              🔍 Voir les salles disponibles
+              {t('dashboard.seeAvailableRooms')}
             </Button>
 
             {showAvailableRooms && (
               <div className="mt-2">
                 <p className="text-sm font-medium mb-2" style={{ color: PRIMARY }}>
-                  {availableRooms.length} salle{availableRooms.length > 1 ? 's' : ''} disponible{availableRooms.length > 1 ? 's' : ''}
+                  {availableRooms.length} {availableRooms.length > 1 ? t('dashboard.roomsPlural') : t('dashboard.roomSingular')}
                 </p>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {availableRooms.map((room) => (
@@ -647,7 +649,7 @@ export default function DashboardPage() {
                       `}
                       onClick={() => {
                         setFormData({ ...formData, room_id: room.id })
-                        toast.success(`Salle "${room.name}" sélectionnée`)
+                        toast.success(t('dashboard.roomSelected', { name: room.name }))
                       }}
                     >
                       <div className="flex justify-between items-center">
@@ -661,7 +663,7 @@ export default function DashboardPage() {
                   ))}
                   {availableRooms.length === 0 && (
                     <div className="p-4 text-center text-red-500 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                      ⚠️ Aucune salle disponible
+                      {t('dashboard.noRoomAvailable')}
                     </div>
                   )}
                 </div>
@@ -669,7 +671,7 @@ export default function DashboardPage() {
             )}
 
             <div>
-              <Label>Salle sélectionnée</Label>
+              <Label>{t('dashboard.selectedRoomLabel')}</Label>
               {formData.room_id ? (
                 <div className="mt-1 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg flex justify-between items-center border-2 border-green-200 dark:border-green-800">
                   <span className="font-medium" style={{ color: PRIMARY }}>
@@ -698,7 +700,7 @@ export default function DashboardPage() {
                 setAvailableRooms([])
               }}
             >
-              Annuler
+              {t('dashboard.cancel')}
             </Button>
             <Button
               onClick={handleBookingSubmit}
@@ -706,7 +708,7 @@ export default function DashboardPage() {
               className="hover:opacity-90 text-white"
               disabled={!formData.room_id}
             >
-              Réserver
+              {t('dashboard.book')}
             </Button>
           </DialogFooter>
         </DialogContent>

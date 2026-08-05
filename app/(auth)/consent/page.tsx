@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 
 export default function ConsentPage() {
   const [emailConsent, setEmailConsent] = useState(false)
@@ -17,6 +19,7 @@ export default function ConsentPage() {
   const [phoneNumber, setPhoneNumber] = useState('')
   const router = useRouter()
   const supabase = createClient()
+  const { t } = useLanguage()
 
   useEffect(() => {
     async function checkUser() {
@@ -54,7 +57,7 @@ export default function ConsentPage() {
 
   const handleSubmit = async () => {
     if (!emailConsent && !whatsappConsent) {
-      toast.warning('Merci de donner au moins un consentement pour continuer')
+      toast.warning(t('consent.toastWarnAtLeastOne'))
       return
     }
 
@@ -99,10 +102,10 @@ export default function ConsentPage() {
           })
       }
 
-      toast.success('Merci ! Vos préférences ont été enregistrées.')
+      toast.success(t('consent.toastSuccess'))
       router.push('/dashboard')
     } catch (error: any) {
-      toast.error(error.message || 'Erreur lors de l\'enregistrement des préférences')
+      toast.error(error.message || t('consent.toastError'))
     } finally {
       setLoading(false)
     }
@@ -110,29 +113,31 @@ export default function ConsentPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8">
-      <Card className="w-full max-w-lg shadow-lg">
+      <Card className="w-full max-w-lg shadow-lg relative">
+        <div className="absolute top-4 right-4">
+          <LanguageSwitcher />
+        </div>
         <CardHeader className="text-center pb-2">
           <CardTitle className="text-2xl text-[#0056B3]">
-            Préférences de notification
+            {t('consent.title')}
           </CardTitle>
           <CardDescription className="mt-1">
-            Merci de donner votre consentement pour recevoir des notifications
+            {t('consent.subtitle')}
           </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-5 pt-6">
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-            <h3 className="font-semibold text-blue-800">Pourquoi avons-nous besoin de votre consentement ?</h3>
+            <h3 className="font-semibold text-blue-800">{t('consent.whyTitle')}</h3>
             <p className="text-sm text-blue-700 mt-1">
-              MDI RoomPulse envoie des notifications quand des salles se libèrent.
-              Nous respectons votre vie privée et n'envoyons que les notifications que vous acceptez explicitement.
+              {t('consent.whyBody')}
             </p>
           </div>
 
           {phoneNumber && (
             <div className="bg-green-50 p-3 rounded-lg border border-green-200">
               <p className="text-sm text-green-700">
-                📱 Numéro WhatsApp enregistré : <strong>{phoneNumber}</strong>
+                📱 {t('consent.whatsappNumberSaved')} <strong>{phoneNumber}</strong>
               </p>
             </div>
           )}
@@ -147,13 +152,13 @@ export default function ConsentPage() {
               />
               <div>
                 <Label htmlFor="email-consent" className="font-semibold">
-                  📧 Notifications par email
+                  📧 {t('consent.emailTitle')}
                 </Label>
                 <p className="text-sm text-gray-500">
-                  Recevoir une notification par email quand une salle se libère
+                  {t('consent.emailDesc')}
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
-                  Nous n'envoyons que les mises à jour pertinentes sur la disponibilité des salles
+                  {t('consent.emailSubDesc')}
                 </p>
               </div>
             </div>
@@ -167,14 +172,14 @@ export default function ConsentPage() {
               />
               <div>
                 <Label htmlFor="whatsapp-consent" className="font-semibold">
-                  💬 Notifications WhatsApp
+                  💬 {t('consent.whatsappTitle')}
                 </Label>
                 <p className="text-sm text-gray-500">
-                  Recevoir une notification WhatsApp quand une salle se libère
+                  {t('consent.whatsappDesc')}
                 </p>
                 {!phoneNumber && (
                   <p className="text-xs text-red-500 mt-1">
-                    ⚠️ Vous n'avez pas encore ajouté de numéro WhatsApp. Vous pouvez l'ajouter dans votre profil.
+                    ⚠️ {t('consent.noWhatsappNumber')}
                   </p>
                 )}
               </div>
@@ -182,15 +187,14 @@ export default function ConsentPage() {
           </div>
 
           <div className="bg-gray-50 p-4 rounded-lg border text-sm text-gray-600">
-            <p className="font-medium">✅ Ce à quoi vous consentez :</p>
+            <p className="font-medium">✅ {t('consent.agreeTo')}</p>
             <ul className="list-disc list-inside mt-2 space-y-1">
-              <li>Recevoir des notifications sur la disponibilité des salles</li>
-              <li>Recevoir une alerte quand toutes les salles sont occupées</li>
-              <li>Des notifications personnalisées pour les salles suivies</li>
+              <li>{t('consent.agreeItem1')}</li>
+              <li>{t('consent.agreeItem2')}</li>
+              <li>{t('consent.agreeItem3')}</li>
             </ul>
             <p className="mt-2 text-xs text-gray-500">
-              Vous pouvez modifier ces préférences à tout moment dans votre profil.
-              Nous ne partageons jamais vos données avec des tiers.
+              {t('consent.changeAnytime')}
             </p>
           </div>
         </CardContent>
@@ -201,11 +205,11 @@ export default function ConsentPage() {
             disabled={loading || (!emailConsent && !whatsappConsent)}
             className="w-full h-11 bg-[#0056B3] hover:bg-[#00449E]"
           >
-            {loading ? 'Enregistrement...' : 'Enregistrer mes préférences'}
+            {loading ? t('consent.saving') : t('consent.saveButton')}
           </Button>
           {!emailConsent && !whatsappConsent && (
             <p className="text-xs text-red-500 text-center">
-              Vous devez donner au moins un consentement pour continuer
+              {t('consent.mustGrantOne')}
             </p>
           )}
         </CardFooter>

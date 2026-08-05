@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { Download } from 'lucide-react'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 interface HistoryItem {
   id: string
@@ -80,6 +81,7 @@ export default function HistoryPage() {
   const [filterPeriod, setFilterPeriod] = useState<'today' | 'week' | 'all'>('all')
   const [filterUser, setFilterUser] = useState('')
   const supabase = createClient()
+  const { t } = useLanguage()
 
   useEffect(() => {
     fetchData()
@@ -98,12 +100,10 @@ export default function HistoryPage() {
       .order('changed_at', { ascending: false })
       .limit(100)
 
-    // ✅ Correction : Récupération des données avec le bon typage
     const { data: roomsData } = await supabase
       .from('rooms')
       .select('id, name, is_occupied, occupied_at, occupied_until, current_people, max_people, occupied_by')
 
-    // ✅ Transformation des données pour correspondre à l'interface RoomRow
     const formattedRooms: RoomRow[] = (roomsData || []).map((room: any) => ({
       ...room,
       profiles: room.occupied_by ? {
@@ -123,7 +123,7 @@ export default function HistoryPage() {
     const lastName = item.profiles?.last_name || ''
     const userName = `${firstName} ${lastName}`.trim() || item.profiles?.email?.split('@')[0] || 'Utilisateur'
 
-    const action = item.is_occupied ? 'a occupé' : 'a libéré'
+    const action = item.is_occupied ? t('history.occupied') : t('history.freed')
     const roomName = item.rooms?.name || 'salle inconnue'
     const time = new Date(item.changed_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 
@@ -136,9 +136,9 @@ export default function HistoryPage() {
   }
 
   const calculateDuration = (start: string | null, end: string | null): { label: string; minutes: number | null } => {
-    if (!start || !end) return { label: 'En cours', minutes: null }
+    if (!start || !end) return { label: t('history.inProgress'), minutes: null }
     const diffMin = Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000)
-    if (diffMin < 0) return { label: 'En cours', minutes: null }
+    if (diffMin < 0) return { label: t('history.inProgress'), minutes: null }
     if (diffMin < 60) return { label: `${diffMin} min`, minutes: diffMin }
     const hours = Math.floor(diffMin / 60)
     const minutes = diffMin % 60
@@ -166,12 +166,12 @@ export default function HistoryPage() {
         const current = events[i]
         const next = events[i + 1] || null
 
-        let status = current.is_occupied ? 'Occupée' : 'Libre'
+        let status = current.is_occupied ? t('history.occupied') : t('history.freed')
         let endTime: string | null = next ? next.changed_at : null
 
         if (!next && roomInfo?.is_occupied && current.is_occupied) {
           endTime = roomInfo.occupied_until
-          status = 'Occupée (en cours)'
+          status = t('history.inProgress')
         }
 
         const { label: durationLabel, minutes: durationMin } = calculateDuration(current.changed_at, endTime)
@@ -185,7 +185,7 @@ export default function HistoryPage() {
           startTime: current.changed_at,
           endTime,
           startTimeFormatted: formatTime(current.changed_at),
-          endTimeFormatted: endTime ? formatTime(endTime) : 'En cours',
+          endTimeFormatted: endTime ? formatTime(endTime) : t('history.inProgress'),
           duration: durationLabel,
           durationMin,
           userEmail: current.profiles?.email || 'Système',
@@ -210,12 +210,12 @@ export default function HistoryPage() {
             id: `current-${room.id}`,
             roomId: room.id,
             roomName: room.name,
-            status: 'Occupée (en cours)',
+            status: t('history.inProgress'),
             is_occupied: true,
             startTime: room.occupied_at,
             endTime: room.occupied_until,
             startTimeFormatted: formatTime(room.occupied_at),
-            endTimeFormatted: room.occupied_until ? formatTime(room.occupied_until) : 'En cours',
+            endTimeFormatted: room.occupied_until ? formatTime(room.occupied_until) : t('history.inProgress'),
             duration: calculateDuration(room.occupied_at, room.occupied_until).label,
             durationMin: calculateDuration(room.occupied_at, room.occupied_until).minutes,
             userEmail: room.profiles?.email || 'Inconnu',
@@ -231,12 +231,10 @@ export default function HistoryPage() {
     return result
   }, [history, rooms])
 
-  // Liste des salles pour le sélecteur de filtre
   const roomOptions = useMemo(() => {
     return [...rooms].sort((a, b) => a.name.localeCompare(b.name))
   }, [rooms])
 
-  // Timeline filtrée selon les critères sélectionnés
   const filteredTimeline = useMemo(() => {
     const now = new Date()
     const weekAgo = new Date(now)
@@ -264,7 +262,6 @@ export default function HistoryPage() {
 
   const hasActiveFilters = filterRoomId !== 'all' || filterPeriod !== 'all' || filterUser.trim() !== ''
 
-  // Statistiques du jour
   const stats = useMemo(() => {
     const todayStr = new Date().toDateString()
     const todayEntries = timeline.filter(e => new Date(e.startTime).toDateString() === todayStr)
@@ -292,7 +289,6 @@ export default function HistoryPage() {
     }
   }, [timeline, rooms])
 
-  // Regroupement par jour
   const grouped = useMemo(() => {
     const groups: { label: string; entries: TimelineEntry[] }[] = []
     const todayStr = new Date().toDateString()
@@ -304,9 +300,9 @@ export default function HistoryPage() {
       const d = new Date(entry.startTime)
       const dStr = d.toDateString()
       const label = dStr === todayStr
-        ? "Aujourd'hui"
+        ? t('history.today')
         : dStr === yesterdayStr
-          ? 'Hier'
+          ? t('history.yesterday')
           : d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
 
       let group = groups.find(g => g.label === label)
@@ -326,43 +322,39 @@ export default function HistoryPage() {
       day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
     })
 
-    // En-tête
     doc.setFontSize(16)
     doc.setTextColor(37, 84, 224)
-    doc.text('Historique des salles', 14, 18)
+    doc.text(t('history.title'), 14, 18)
 
     doc.setFontSize(9)
     doc.setTextColor(120, 120, 120)
-    doc.text(`Généré le ${generatedAt}`, 14, 24)
+    doc.text(`${t('history.generatedAt')} ${generatedAt}`, 14, 24)
 
-    // Résumé
     doc.setFontSize(10)
     doc.setTextColor(60, 60, 60)
     doc.text(
-      `Mouvements aujourd'hui: ${stats.todayCount}   |   Occupées maintenant: ${stats.occupiedNow}   |   Salle la plus active: ${stats.topRoom}   |   Durée moyenne: ${stats.avgLabel}`,
+      `${t('history.movementsToday')}: ${stats.todayCount}   |   ${t('history.occupiedNow')}: ${stats.occupiedNow}   |   ${t('history.mostActive')}: ${stats.topRoom}   |   ${t('history.avgDuration')}: ${stats.avgLabel}`,
       14, 31
     )
 
-    // Filtres actifs
     if (hasActiveFilters) {
       const activeRoomName = filterRoomId === 'all' ? null : roomOptions.find(r => r.id === filterRoomId)?.name
-      const periodLabel = filterPeriod === 'today' ? "Aujourd'hui" : filterPeriod === 'week' ? '7 derniers jours' : null
+      const periodLabel = filterPeriod === 'today' ? t('history.periodToday') : filterPeriod === 'week' ? t('history.periodWeek') : null
       const parts = [
-        activeRoomName ? `Salle: ${activeRoomName}` : null,
-        periodLabel ? `Période: ${periodLabel}` : null,
-        filterUser.trim() ? `Utilisateur: ${filterUser.trim()}` : null
+        activeRoomName ? `${t('history.roomFilter', { name: activeRoomName })}` : null,
+        periodLabel ? `${t('history.periodFilter', { period: periodLabel })}` : null,
+        filterUser.trim() ? `${t('history.userFilter', { name: filterUser.trim() })}` : null
       ].filter(Boolean)
       doc.setFontSize(9)
       doc.setTextColor(150, 100, 20)
-      doc.text(`Filtres appliqués — ${parts.join('  ·  ')}`, 14, 36)
+      doc.text(`${t('history.filtersApplied')} — ${parts.join('  ·  ')}`, 14, 36)
     }
 
-    // Tableau
     const rows = filteredTimeline.map((item) => [
       new Date(item.startTime).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }),
       item.userName,
       item.roomName,
-      item.is_occupied ? 'Occupée' : 'Libérée',
+      item.is_occupied ? t('history.occupied') : t('history.freed'),
       `${item.startTimeFormatted} - ${item.endTimeFormatted}`,
       item.duration,
       item.peopleInfo !== 'N/A' ? item.peopleInfo : '-'
@@ -370,7 +362,7 @@ export default function HistoryPage() {
 
     autoTable(doc, {
       startY: hasActiveFilters ? 41 : 36,
-      head: [['Date', 'Utilisateur', 'Salle', 'Action', 'Plage horaire', 'Durée', 'Personnes']],
+      head: [[t('history.date'), t('history.user'), t('history.room'), t('history.action'), t('history.timeSlot'), t('history.duration'), t('history.persons')]],
       body: rows,
       styles: { fontSize: 8, cellPadding: 2 },
       headStyles: { fillColor: [37, 84, 224], textColor: 255 },
@@ -397,17 +389,16 @@ export default function HistoryPage() {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-950">
       <div className="container mx-auto py-10 px-4 max-w-4xl">
 
-        {/* Header */}
         <div className="flex items-start justify-between gap-4 mb-8">
           <div>
             <span className="text-xs font-semibold tracking-[0.2em] uppercase" style={{ color: PRIMARY }}>
-              Journal d&apos;activité
+              {t('history.activityLog')}
             </span>
             <h1 className="text-3xl font-bold text-slate-900 dark:text-white mt-1">
-              Historique des salles
+              {t('history.title')}
             </h1>
             <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-              Le fil des occupations, en temps réel
+              {t('history.subtitle')}
             </p>
           </div>
 
@@ -418,35 +409,33 @@ export default function HistoryPage() {
             style={{ backgroundColor: PRIMARY }}
           >
             <Download className="w-4 h-4" />
-            Générer PDF
+            {t('history.exportPDF')}
           </button>
         </div>
 
-        {/* Stat cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
           <div className="rounded-2xl p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
             <div className="text-2xl font-bold text-slate-900 dark:text-white">{stats.todayCount}</div>
-            <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Mouvements aujourd&apos;hui</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{t('history.movementsToday')}</div>
           </div>
           <div className="rounded-2xl p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
             <div className="text-2xl font-bold" style={{ color: stats.occupiedNow > 0 ? '#DC2626' : '#059669' }}>
               {stats.occupiedNow}
             </div>
-            <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Occupées maintenant</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{t('history.occupiedNow')}</div>
           </div>
           <div className="rounded-2xl p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
             <div className="text-lg font-bold text-slate-900 dark:text-white truncate" title={stats.topRoom}>
               {stats.topRoom}
             </div>
-            <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Salle la plus active</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{t('history.mostActive')}</div>
           </div>
           <div className="rounded-2xl p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
             <div className="text-2xl font-bold text-slate-900 dark:text-white">{stats.avgLabel}</div>
-            <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Durée moyenne</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{t('history.avgDuration')}</div>
           </div>
         </div>
 
-        {/* Filtres */}
         <div className="flex flex-wrap items-center gap-3 mb-6 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
           <select
             value={filterRoomId}
@@ -454,7 +443,7 @@ export default function HistoryPage() {
             className="text-sm px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2"
             style={{ '--tw-ring-color': `${PRIMARY}55` } as React.CSSProperties}
           >
-            <option value="all">Toutes les salles</option>
+            <option value="all">{t('history.allRooms')}</option>
             {roomOptions.map(room => (
               <option key={room.id} value={room.id}>{room.name}</option>
             ))}
@@ -462,9 +451,9 @@ export default function HistoryPage() {
 
           <div className="flex items-center gap-1 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1">
             {([
-              { key: 'today', label: "Aujourd'hui" },
-              { key: 'week', label: '7 jours' },
-              { key: 'all', label: 'Tout' },
+              { key: 'today', label: t('history.periodToday') },
+              { key: 'week', label: t('history.periodWeek') },
+              { key: 'all', label: t('history.periodAll') },
             ] as const).map(opt => (
               <button
                 key={opt.key}
@@ -483,7 +472,7 @@ export default function HistoryPage() {
 
           <input
             type="text"
-            placeholder="Filtrer par utilisateur..."
+            placeholder={t('history.filterUser')}
             value={filterUser}
             onChange={(e) => setFilterUser(e.target.value)}
             className="text-sm px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 placeholder:text-slate-400 focus:outline-none focus:ring-2 flex-1 min-w-[160px]"
@@ -495,27 +484,26 @@ export default function HistoryPage() {
               onClick={resetFilters}
               className="text-xs font-medium px-3 py-1.5 rounded-lg text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             >
-              ✕ Réinitialiser
+              {t('history.resetFilters')}
             </button>
           )}
 
           <span className="text-xs text-slate-400 ml-auto shrink-0">
-            {filteredTimeline.length} résultat{filteredTimeline.length > 1 ? 's' : ''}
+            {filteredTimeline.length} {filteredTimeline.length > 1 ? t('history.results') : t('history.result')}
           </span>
         </div>
 
-        {/* Timeline */}
         {timeline.length === 0 ? (
           <div className="text-center py-20 text-slate-400 dark:text-slate-500">
             <div className="text-4xl mb-3">🗓️</div>
-            Aucun historique pour l&apos;instant. Les occupations de salles apparaîtront ici.
+            {t('history.noHistory')}
           </div>
         ) : filteredTimeline.length === 0 ? (
           <div className="text-center py-20 text-slate-400 dark:text-slate-500">
             <div className="text-4xl mb-3">🔍</div>
-            Aucun résultat pour ces filtres.
+            {t('history.noResults')}
             <button onClick={resetFilters} className="block mx-auto mt-3 text-sm font-medium" style={{ color: PRIMARY }}>
-              Réinitialiser les filtres
+              {t('history.resetFilters')}
             </button>
           </div>
         ) : (
@@ -529,16 +517,14 @@ export default function HistoryPage() {
                 </div>
 
                 <div className="relative pl-8">
-                  {/* Ligne verticale de la timeline */}
                   <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-slate-200 dark:bg-slate-800" />
 
                   <div className="space-y-3">
                     {group.entries.map((item) => {
                       const color = hashColor(item.roomName)
-                      const isLive = item.status === 'Occupée (en cours)'
+                      const isLive = item.status === t('history.inProgress')
                       return (
                         <div key={item.id} className="relative">
-                          {/* Point sur la timeline */}
                           <span
                             className="absolute -left-8 top-5 w-3.5 h-3.5 rounded-full ring-4 ring-white dark:ring-slate-950"
                             style={{ backgroundColor: item.is_occupied ? '#DC2626' : '#059669' }}
@@ -552,7 +538,6 @@ export default function HistoryPage() {
                           </span>
 
                           <div className="flex items-start gap-3 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all">
-                            {/* Avatar */}
                             <div
                               className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 mt-0.5"
                               style={{ backgroundColor: color }}
@@ -565,7 +550,7 @@ export default function HistoryPage() {
                                 <p className="text-sm text-slate-700 dark:text-slate-300 leading-snug">
                                   <span className="font-semibold text-slate-900 dark:text-white">{item.userName}</span>
                                   {' '}
-                                  {item.is_occupied ? 'a occupé' : 'a libéré'}{' '}
+                                  {item.is_occupied ? t('history.occupied') : t('history.freed')}{' '}
                                   <span
                                     className="font-medium px-1.5 py-0.5 rounded-md text-xs"
                                     style={{ backgroundColor: `${color}18`, color }}
@@ -581,7 +566,7 @@ export default function HistoryPage() {
                                     color: isLive ? 'white' : item.is_occupied ? '#B91C1C' : '#15803D'
                                   }}
                                 >
-                                  {isLive ? '● EN COURS' : item.status.toUpperCase()}
+                                  {isLive ? '● ' + t('history.inProgress').toUpperCase() : item.status.toUpperCase()}
                                 </span>
                               </div>
 

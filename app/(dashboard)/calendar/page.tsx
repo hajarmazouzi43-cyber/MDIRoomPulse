@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 interface CalendarEvent {
   title: string
@@ -19,6 +20,7 @@ export default function CalendarPage() {
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
+  const { t } = useLanguage()
 
   useEffect(() => {
     fetchData()
@@ -29,22 +31,20 @@ export default function CalendarPage() {
     const { data: roomsData } = await supabase.from('rooms').select('*')
     if (roomsData) {
       setRooms(roomsData)
-      // Générer les événements à partir des salles occupées
       const calendarEvents = roomsData
         .filter((r: any) => r.is_occupied && r.occupied_at)
         .map((r: any) => ({
-          title: `Room: ${r.name}`,
+          title: `${t('calendar.room', { name: r.name })}`,
           start: r.occupied_at,
           end: r.occupied_until || new Date(Date.now() + 3600000).toISOString(),
           location: r.location || 'N/A',
-          description: `Capacity: ${r.capacity} people\nCurrent: ${r.current_people || 0} people`,
+          description: t('calendar.description', { capacity: r.capacity, current: r.current_people || 0 }),
         }))
       setEvents(calendarEvents)
     }
     setLoading(false)
   }
 
-  // Générer le lien Google Calendar
   const syncToGoogleCalendar = () => {
     if (events.length === 0) {
       toast.info('No events to sync')
@@ -63,7 +63,6 @@ export default function CalendarPage() {
     toast.success('Opening Google Calendar')
   }
 
-  // Générer le lien Outlook
   const syncToOutlookCalendar = () => {
     if (events.length === 0) {
       toast.info('No events to sync')
@@ -83,7 +82,6 @@ export default function CalendarPage() {
     toast.success('Opening Outlook Calendar')
   }
 
-  // Exporter en format ICS
   const exportICS = () => {
     if (events.length === 0) {
       toast.info('No events to export')
@@ -132,61 +130,60 @@ export default function CalendarPage() {
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold text-[#0056B3] mb-6">
-        📅 Calendar Sync
+        {t('calendar.title')}
       </h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <Card>
           <CardHeader>
-            <CardTitle>Google Calendar</CardTitle>
+            <CardTitle>{t('calendar.googleCalendar')}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-gray-500 mb-4">
-              Sync room events to Google Calendar.
+              {t('calendar.syncInfo')}
             </p>
             <Button onClick={syncToGoogleCalendar} className="w-full bg-blue-600 hover:bg-blue-700">
-              📤 Sync to Google
+              {t('calendar.syncGoogle')}
             </Button>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Outlook Calendar</CardTitle>
+            <CardTitle>{t('calendar.outlookCalendar')}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-gray-500 mb-4">
-              Sync room events to Outlook Calendar.
+              {t('calendar.syncInfo')}
             </p>
             <Button onClick={syncToOutlookCalendar} className="w-full bg-blue-600 hover:bg-blue-700">
-              📤 Sync to Outlook
+              {t('calendar.syncOutlook')}
             </Button>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>📄 Export ICS</CardTitle>
+            <CardTitle>{t('calendar.exportICS')}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-gray-500 mb-4">
-              Download calendar as ICS file.
+              {t('calendar.exportInfo')}
             </p>
             <Button onClick={exportICS} className="w-full bg-green-600 hover:bg-green-700">
-              📄 Export ICS
+              {t('calendar.export')}
             </Button>
           </CardContent>
         </Card>
       </div>
 
-      {/* Liste des événements */}
       <Card>
         <CardHeader>
-          <CardTitle>📋 Current Events</CardTitle>
+          <CardTitle>{t('calendar.currentEvents')}</CardTitle>
         </CardHeader>
         <CardContent>
           {events.length === 0 ? (
-            <p className="text-gray-500">No events to display</p>
+            <p className="text-gray-500">{t('calendar.noEvents')}</p>
           ) : (
             <ul className="space-y-2">
               {events.map((event, index) => (
