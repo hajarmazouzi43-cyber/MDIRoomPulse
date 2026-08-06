@@ -34,7 +34,9 @@ function getFromCache(message: string): string | null {
 function setCache(message: string, response: string): void {
   if (messageCache.size >= MAX_CACHE_SIZE) {
     const firstKey = messageCache.keys().next().value
-    messageCache.delete(firstKey)
+    if (firstKey !== undefined) {
+      messageCache.delete(firstKey)
+    }
   }
   
   const key = getCacheKey(message)
