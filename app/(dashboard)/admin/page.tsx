@@ -983,13 +983,27 @@ export default function AdminPage() {
                     <TableCell>
                       <div className="flex gap-1">
                         {!user.is_verified ? (
-                          <Button
-                            size="sm"
-                            onClick={() => handleVerifyUser(user.id, user.email, false)}
-                            className="bg-green-500 hover:bg-green-600 text-white text-xs h-8"
-                          >
-                            <MailCheck className="w-3.5 h-3.5 mr-1" /> {t('admin.verifyUser')}
-                          </Button>
+                          <>
+                            <Button
+                              size="sm"
+                              onClick={() => handleVerifyUser(user.id, user.email, false)}
+                              className="bg-green-500 hover:bg-green-600 text-white text-xs h-8"
+                            >
+                              <MailCheck className="w-3.5 h-3.5 mr-1" /> {t('admin.verifyUser')}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                if (confirm(`Êtes-vous sûr de vouloir annuler l'accès de ${user.email} ?`)) {
+                                  handleDelete(user.id)
+                                }
+                              }}
+                              className="text-xs h-8 border-red-300 text-red-600 hover:bg-red-50"
+                            >
+                              <XCircle className="w-3.5 h-3.5 mr-1" /> {t('admin.cancel')}
+                            </Button>
+                          </>
                         ) : (
                           <Button
                             size="sm"
