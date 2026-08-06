@@ -26,6 +26,19 @@ import {
   X,
   Timer,
   PartyPopper,
+  Eye,
+  Mail,
+  Monitor,
+  Wifi,
+  Coffee,
+  Zap,
+  Shield,
+  XCircle,
+  Layers,
+  Calendar,
+  UserCheck,
+  UserX,
+  AlertCircle
 } from 'lucide-react'
 
 interface Room {
@@ -80,6 +93,13 @@ const categoryHex: Record<string, [string, string]> = {
   reunion: ['#8b5cf6', '#a855f7'],
   poste: ['#64748b', '#475569'],
   detente: ['#f59e0b', '#f97316'],
+}
+
+const categoryLabelsStatic: Record<string, string> = {
+  bureau: 'Bureau',
+  reunion: 'Réunion',
+  poste: 'Poste de travail',
+  detente: 'Détente',
 }
 
 // ---------- Petits utilitaires ----------
@@ -165,6 +185,8 @@ export default function RoomsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [now, setNow] = useState(new Date())
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
   const supabase = createClient()
   const { t } = useLanguage()
   const categoryLabels = getCategoryLabels(t)
@@ -177,6 +199,21 @@ export default function RoomsPage() {
   useEffect(() => {
     filterRooms()
   }, [rooms, selectedCategory, searchTerm])
+
+  // Mettre à jour l'heure
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 60000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Gestion de la touche Échap
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeModal()
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [])
 
   const getUser = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -191,8 +228,6 @@ export default function RoomsPage() {
       .order('name')
 
     if (data) {
-      // Libération automatique : si une salle est marquée occupée mais que l'heure
-      // de fin prévue est déjà passée, on la libère silencieusement avant d'afficher
       const now = new Date()
       const expired = data.filter(
         (r: any) => r.is_occupied && r.occupied_until && new Date(r.occupied_until) < now
@@ -247,6 +282,21 @@ export default function RoomsPage() {
     setFilteredRooms(filtered)
   }
 
+  // ✅ Fonction pour ouvrir la modale
+  const openModal = (room: Room, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setSelectedRoom(room)
+    setIsModalOpen(true)
+    document.body.style.overflow = 'hidden'
+  }
+
+  // ✅ Fonction pour fermer la modale
+  const closeModal = () => {
+    setIsModalOpen(false)
+    document.body.style.overflow = 'auto'
+    setTimeout(() => setSelectedRoom(null), 300)
+  }
+
   const occupyRoomWithTime = async (roomId: string, roomName: string, peopleCount: number = 1, startTime: string, endTime: string) => {
     if (!user) {
       toast.error(t('rooms.pleaseSignInToOccupy'))
@@ -273,8 +323,6 @@ export default function RoomsPage() {
     }
 
     const newTotal = Math.min(currentPeople + peopleCount, maxPeople)
-    // getLocalDateString() évite le bug de décalage d'un jour de
-    // new Date().toISOString().split('T')[0] (conversion UTC).
     const today = getLocalDateString()
     const startDateTime = new Date(`${today}T${startTime}:00`)
     const endDateTime = new Date(`${today}T${endTime}:00`)
@@ -381,11 +429,13 @@ export default function RoomsPage() {
     }
 
     fetchRooms()
+    // Fermer la modale si la salle libérée est celle affichée
+    if (selectedRoom?.id === roomId) {
+      closeModal()
+    }
   }
 
-  // ✅ Mettre une salle hors service (admin uniquement)
   const handleSetOutOfService = async (roomId: string, roomName: string) => {
-    // Vérifier si l'utilisateur est admin
     if (user?.role !== 'admin') {
       toast.error(t('rooms.adminOnlyOutOfService'))
       return
@@ -400,7 +450,6 @@ export default function RoomsPage() {
     }
 
     try {
-      // 1. Mettre à jour la salle
       const { error: updateError } = await supabase
         .from('rooms')
         .update({
@@ -416,7 +465,6 @@ export default function RoomsPage() {
 
       if (updateError) throw updateError
 
-      // 2. Enregistrer dans l'historique
       await supabase.from('room_history').insert({
         room_id: roomId,
         is_occupied: false,
@@ -428,7 +476,6 @@ export default function RoomsPage() {
         }
       })
 
-      // 3. ✅ NOTIFIER LES RÉSERVATAIRES
       const result = await notifyRoomOutOfService(roomId, reason)
       
       if (result.email > 0 || result.sms > 0) {
@@ -437,15 +484,16 @@ export default function RoomsPage() {
 
       toast.success(`${t('rooms.nowOutOfService')} ${roomName}`)
       fetchRooms()
+      if (selectedRoom?.id === roomId) {
+        closeModal()
+      }
     } catch (error) {
       toast.error(t('rooms.outOfServiceError'))
       console.error(error)
     }
   }
 
-  // ✅ Remettre une salle en service (admin uniquement)
   const handleBackInService = async (roomId: string, roomName: string) => {
-    // Vérifier si l'utilisateur est admin
     if (user?.role !== 'admin') {
       toast.error(t('rooms.adminOnlyBackInService'))
       return
@@ -462,7 +510,6 @@ export default function RoomsPage() {
 
       if (error) throw error
 
-      // Enregistrer dans l'historique
       await supabase.from('room_history').insert({
         room_id: roomId,
         is_occupied: false,
@@ -473,7 +520,6 @@ export default function RoomsPage() {
         }
       })
 
-      // ✅ NOTIFIER LES ABONNÉS que la salle est de nouveau disponible
       const result = await notifyRoomStatusChange(roomId, 'back_in_service')
       
       if (result.email > 0 || result.sms > 0) {
@@ -482,6 +528,9 @@ export default function RoomsPage() {
 
       toast.success(`${t('rooms.nowBackInService')} ${roomName}`)
       fetchRooms()
+      if (selectedRoom?.id === roomId) {
+        closeModal()
+      }
     } catch (error) {
       toast.error(t('rooms.backInServiceError'))
       console.error(error)
@@ -914,12 +963,29 @@ export default function RoomsPage() {
                       </div>
                     )}
 
-                    <Link href={`/rooms/${room.id}`}>
-                      <p className="text-xs md:text-sm text-[#0056B3] dark:text-[#00A3E0] hover:underline mt-1 flex items-center gap-1 group-hover:gap-2 transition-all room-link">
-                        <span className="truncate">{t('rooms.viewDetails')}</span>
-                        <ChevronRight className="w-3 h-3 md:w-3.5 md:h-3.5 transition-transform group-hover:translate-x-1 shrink-0" />
-                      </p>
-                    </Link>
+                    {/* ✅ REMPLACÉ : Bouton qui ouvre la modale au lieu du Link */}
+                    {!isDetente && !isOutOfService && user && (
+                      <div className="pt-1">
+                        <Button
+                          onClick={(e) => openModal(room, e)}
+                          className="w-full text-xs md:text-sm bg-gradient-to-r from-[#0056B3] to-[#00A3E0] hover:opacity-90 text-white shadow-lg shadow-[#0056B3]/25 transition-all hover:scale-105 active:scale-95 py-1 h-7 md:h-9"
+                        >
+                          <Eye className="w-3 h-3 md:w-3.5 md:h-3.5 mr-1" />
+                          <span className="hidden sm:inline">{t('rooms.viewDetails')}</span>
+                          <span className="sm:hidden">👁️</span>
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Si pas d'utilisateur, afficher un lien vers la page de connexion ou rien */}
+                    {!user && !isDetente && !isOutOfService && (
+                      <Link href="/auth/signin">
+                        <p className="text-xs md:text-sm text-[#0056B3] dark:text-[#00A3E0] hover:underline mt-1 flex items-center gap-1">
+                          {t('rooms.signInToView') || 'Se connecter pour voir les détails'}
+                          <ChevronRight className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                        </p>
+                      </Link>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -949,6 +1015,197 @@ export default function RoomsPage() {
           <Sparkles className="w-6 h-6" />
         </button>
       </div>
+
+      {/* 🟢 MODALE */}
+      {isModalOpen && selectedRoom && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          onClick={closeModal}
+        >
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"></div>
+          
+          <div 
+            className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-[#0f172a] rounded-2xl shadow-2xl transform transition-all duration-300 scale-100 opacity-100"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={closeModal}
+              className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-[#1e293b] transition-colors z-10"
+            >
+              <XCircle className="w-6 h-6 text-gray-500 dark:text-gray-400" />
+            </button>
+
+            <div 
+              className="relative p-6 text-white"
+              style={{ 
+                background: `linear-gradient(135deg, ${categoryHex[selectedRoom.category]?.[0] || '#6b7280'}, ${categoryHex[selectedRoom.category]?.[1] || '#9ca3af'})` 
+              }}
+            >
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
+                  {(() => {
+                    const Icon = categoryIcons[selectedRoom.category] || Building2
+                    return <Icon className="w-8 h-8" />
+                  })()}
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold">{selectedRoom.name}</h2>
+                  <div className="flex items-center gap-2 mt-1">
+                    <MapPin className="w-4 h-4 opacity-80" />
+                    <span className="text-sm opacity-90">{selectedRoom.location || 'Emplacement non spécifié'}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <Badge className={`absolute top-4 right-16 px-3 py-1 text-sm ${selectedRoom.is_out_of_service ? 'bg-gray-700' : selectedRoom.is_occupied ? 'bg-red-500' : 'bg-green-500'}`}>
+                {selectedRoom.is_out_of_service ? '🚫 Hors service' : selectedRoom.is_occupied ? '🔴 Occupée' : '🟢 Disponible'}
+              </Badge>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-50 dark:bg-[#1e293b] rounded-xl p-4">
+                  <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm mb-1">
+                    <Users className="w-4 h-4" />
+                    Capacité
+                  </div>
+                  <p className="text-lg font-semibold text-gray-900 dark:text-white">{selectedRoom.capacity} personnes</p>
+                </div>
+                <div className="bg-gray-50 dark:bg-[#1e293b] rounded-xl p-4">
+                  <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm mb-1">
+                    <Layers className="w-4 h-4" />
+                    Catégorie
+                  </div>
+                  <p className="text-lg font-semibold text-gray-900 dark:text-white">{categoryLabelsStatic[selectedRoom.category] || 'Autre'}</p>
+                </div>
+              </div>
+
+              {selectedRoom.max_people > 0 && (
+                <div className="bg-gray-50 dark:bg-[#1e293b] rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm">
+                      <Clock className="w-4 h-4" />
+                      Occupation
+                    </div>
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                      {selectedRoom.current_people || 0} / {selectedRoom.max_people}
+                    </span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ 
+                        width: `${Math.min(100, ((selectedRoom.current_people || 0) / selectedRoom.max_people) * 100)}%`,
+                        background: `linear-gradient(90deg, ${categoryHex[selectedRoom.category]?.[0] || '#6b7280'}, ${categoryHex[selectedRoom.category]?.[1] || '#9ca3af'})`
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              )}
+
+              {selectedRoom.is_occupied && selectedRoom.occupied_until && (
+                <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
+                  <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                    <Timer className="w-4 h-4" />
+                    <span className="font-medium">Temps restant : {formatRemaining(selectedRoom.occupied_until, now, t)}</span>
+                  </div>
+                </div>
+              )}
+
+              {selectedRoom.is_out_of_service && selectedRoom.out_of_service_reason && (
+                <div className="bg-gray-100 dark:bg-gray-800 rounded-xl p-4">
+                  <div className="flex items-start gap-2 text-gray-600 dark:text-gray-400">
+                    <AlertCircle className="w-4 h-4 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-sm">Raison :</p>
+                      <p className="text-sm">{selectedRoom.out_of_service_reason}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {selectedRoom.equipment && selectedRoom.equipment.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                    <Wrench className="w-4 h-4" />
+                    Équipement
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedRoom.equipment.map((item) => {
+                      const icons: Record<string, any> = {
+                        'écran': Monitor,
+                        'projecteur': Monitor,
+                        'wifi': Wifi,
+                        'café': Coffee,
+                        'tableau': Monitor,
+                        'vidéo': Monitor,
+                        'audio': Monitor,
+                      }
+                      const Icon = icons[item.toLowerCase()] || Zap
+                      return (
+                        <span
+                          key={item}
+                          className="flex items-center gap-1 text-xs bg-gray-100 dark:bg-[#1e293b] px-3 py-1.5 rounded-full text-gray-700 dark:text-gray-300"
+                        >
+                          <Icon className="w-3 h-3" />
+                          {item}
+                        </span>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {selectedRoom.is_confidential && (
+                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+                  <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                    <Shield className="w-4 h-4" />
+                    <span className="text-sm font-medium">Salle confidentielle</span>
+                  </div>
+                </div>
+              )}
+
+              {selectedRoom.room_email && (
+                <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                  <Mail className="w-4 h-4" />
+                  <span>{selectedRoom.room_email}</span>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-[#334155]">
+                {!selectedRoom.is_out_of_service && selectedRoom.category !== 'detente' && (
+                  selectedRoom.is_occupied ? (
+                    <Button
+                      onClick={() => freeRoom(selectedRoom.id, selectedRoom.name)}
+                      className="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white"
+                    >
+                      <PartyPopper className="w-4 h-4 mr-2" />
+                      Libérer la salle
+                    </Button>
+                  ) : (
+                    <Button
+                      className="flex-1 bg-gradient-to-r from-[#0056B3] to-[#00A3E0] hover:opacity-90 text-white"
+                      onClick={() => {
+                        toast.info('Fonctionnalité de réservation à venir')
+                      }}
+                    >
+                      <Calendar className="w-4 h-4 mr-2" />
+                      Réserver
+                    </Button>
+                  )
+                )}
+                <Button
+                  variant="outline"
+                  onClick={closeModal}
+                  className="flex-1"
+                >
+                  Fermer
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx global>{`
         .gradient-text {

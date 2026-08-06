@@ -5,7 +5,7 @@ import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai'
 // Initialisation avec le SDK stable
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
-const MODEL = 'gemini-2.0-flash-exp'
+const MODEL = 'gemini-2.0-flash'
 
 // ---------------------------------------------------------------------------
 // 1. Déclaration des outils que le modèle peut appeler
